@@ -29,8 +29,8 @@ fun SplashScreen(navController: NavController) {
         )
         delay(1000)
         // Navega automaticamente para TelaInicio2
-        navController.navigate("tela_inicio2") {
-            popUpTo("tela_inicio2") { inclusive = true } // Remove a TelaInicio1 da backstack
+        navController.navigate("tela_inicio1") {
+            popUpTo("tela_inicio1") { inclusive = true } // Remove a TelaInicio1 da backstack
         }
     }
 

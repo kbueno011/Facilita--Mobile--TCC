@@ -177,7 +177,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
         // Botão Finalizar
         Button(
             onClick = {
-                navController.navigate("homeContratante")
+                navController.navigate("tela_endereco")
             },
             modifier = Modifier
                 .fillMaxWidth()

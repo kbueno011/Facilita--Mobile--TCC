@@ -95,7 +95,7 @@ fun TelaInicio1(navController: NavController) {
             Spacer(modifier = Modifier.height(50.dp))
 
             Button(
-                onClick = { navController.navigate("tela_inicio3") },
+                onClick = { navController.navigate("tela_inicio2") },
                 modifier = Modifier
                     .width(250.dp)
                     .height(60.dp),

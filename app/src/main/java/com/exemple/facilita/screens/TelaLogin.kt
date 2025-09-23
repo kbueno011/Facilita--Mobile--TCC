@@ -34,8 +34,10 @@ import retrofit2.await
 
 @Composable
 fun TelaLogin(navController: NavController) {
-    val facilitaApi = RetrofitFactory.getUserService()
+    val facilitaApi = remember { RetrofitFactory().getUserService() }
+
     val coroutineScope = rememberCoroutineScope()
+    var tentativaSenhaErrada by remember { mutableStateOf(0) } // contador de tentativas
 
     var selectedTab by remember { mutableStateOf(0) }
     var email by remember { mutableStateOf("") }
@@ -174,16 +176,17 @@ fun TelaLogin(navController: NavController) {
                                             facilitaApi.loginUser(login).await()
 
                                         withContext(Dispatchers.Main) {
-                                            // Salva token ou usuário se quiser
+                                            // Login bem-sucedido
+                                            tentativaSenhaErrada = 0 // reseta contador
                                             val token = response.token
                                             val usuario = response.usuario
 
-                                            // Navega para próxima tela
                                             navController.navigate("tela_tipo_conta")
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {
-                                            errorMessage = "Erro ao conectar: ${e.message}"
+                                            tentativaSenhaErrada++ // incrementa erro
+                                            errorMessage = "Email ou senha incorretos"
                                         }
                                     }
                                 }
@@ -216,6 +219,20 @@ fun TelaLogin(navController: NavController) {
                                 color = Color.White
                             )
                         }
+                    }
+
+                    // --- Link Recuperar Senha (aparece após 2 erros) ---
+                    if (tentativaSenhaErrada >= 2) {
+                        Text(
+                            text = "Esqueceu a senha?",
+                            color = Color(0xFF019D31),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .padding(top = 16.dp)
+                                .clickable {
+                                    navController.navigate("tela_recuperar_senha")
+                                }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

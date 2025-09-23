@@ -117,7 +117,7 @@ fun TelaInicio2(navController: NavController) {
                 .height(50.dp))
             Button(
                 onClick = {
-                    navController.navigate("tela_inicio4")
+                    navController.navigate("tela_inicio3")
                 },
                 modifier = Modifier
                     .width(250.dp)

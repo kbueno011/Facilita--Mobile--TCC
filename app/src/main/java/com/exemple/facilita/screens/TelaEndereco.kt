@@ -1,11 +1,9 @@
 package com.exemple.facilita.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,73 +11,90 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import com.exemple.facilita.model.NominatimResult
 import com.exemple.facilita.viewmodel.EnderecoViewModel
-import kotlinx.coroutines.launch
+
 @Composable
-fun TelaEndereco(navController: NavController, viewModel: EnderecoViewModel) {
-    val sugestoes by viewModel.sugestoes.collectAsState() // observa o flow
+fun TelaEnderecoContent(
+    navController: NavHostController,
+    viewModel: EnderecoViewModel
+) {
     var query by remember { mutableStateOf("") }
+    val sugestoes = remember { mutableStateListOf<NominatimResult>() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Escolha o endereço para receber o pedido",
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Top bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { /* TODO: Navegar de volta */ }) {
+                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Voltar")
+            }
+            OutlinedTextField(
+                value = viewModel.endereco.value,
+                onValueChange = { viewModel.endereco.value = it },
+                placeholder = { Text("Digite o endereço") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                viewModel.buscarSugestoes(query) // chama direto
-            },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Buscar endereço") },
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        LazyColumn {
-            items(sugestoes) { endereco ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            // Navega passando coordenadas
-                            navController.navigate(
-                                "confirmar_endereco/${endereco.lat},${endereco.lon}"
-                            )
-                        }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = Color(0xFF019D31)
+        // Lista de sugestões
+        Column(modifier = Modifier.fillMaxWidth()) {
+            sugestoes.forEach { endereco ->
+                EnderecoItem(endereco) {
+                    viewModel.atualizarEndereco(
+                        house = endereco.address?.house_number ?: "",
+                        roadName = endereco.address?.road ?: "",
+                        cityName = endereco.address?.city ?: "",
+                        display = endereco.display_name
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(endereco.display_name)
+                    // TODO: Navegar para próxima tela se necessário
                 }
-                Divider()
             }
         }
     }
 }
 
-
-@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun TelaEnderecoPreview() {
-    TelaEndereco()
+fun EnderecoItem(endereco: NominatimResult, onClick: () -> Unit) {
+    val titulo = buildString {
+        append(endereco.address?.road ?: "")
+        endereco.address?.house_number?.let { append(", $it") }
+    }.ifBlank { endereco.display_name }
+
+    val detalhes = endereco.display_name
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = Color(0xFF019D31)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = titulo,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = detalhes,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+    Divider()
 }

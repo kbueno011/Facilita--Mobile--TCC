@@ -1,6 +1,5 @@
 package com.exemple.facilita
 
-
 import TelaInicio1
 import TelaInicio2
 import TelaInicio3
@@ -8,17 +7,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.exemple.facilita.screens.SplashScreen
-import com.exemple.facilita.screens.TelaCadastro
-import com.exemple.facilita.screens.TelaCompletarPerfilContratante
-import com.exemple.facilita.screens.TelaLogin
-import com.exemple.facilita.screens.TelaRecuperacaoSenha
-import com.exemple.facilita.screens.TelaTermos
-import com.exemple.facilita.screens.TelaTipoConta
+import com.exemple.facilita.screens.*
+import com.exemple.facilita.viewmodel.EnderecoViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +27,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavHost(navController: NavHostController) {
-
     NavHost(
         navController = navController,
         startDestination = "splash"
@@ -40,13 +34,13 @@ fun AppNavHost(navController: NavHostController) {
         composable("splash") {
             SplashScreen(navController)
         }
-        composable("tela_inicio2") {
+        composable("tela_inicio1") {
             TelaInicio1(navController)
         }
-        composable("tela_inicio3") {
+        composable("tela_inicio2") {
             TelaInicio2(navController)
         }
-        composable("tela_inicio4") {
+        composable("tela_inicio3") {
             TelaInicio3(navController)
         }
         composable("tela_login") {
@@ -67,9 +61,14 @@ fun AppNavHost(navController: NavHostController) {
         composable("tela_completar_perfil_contratante") {
             TelaCompletarPerfilContratante(navController)
         }
+        composable("tela_endereco") {
+            val enderecoViewModel: EnderecoViewModel = viewModel() // Sem parâmetros
+            TelaEnderecoContent(
+                navController = navController,
+                viewModel = enderecoViewModel
+            )
+        }
 
 
     }
 }
-
-
