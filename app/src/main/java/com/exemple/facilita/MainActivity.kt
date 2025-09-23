@@ -14,8 +14,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.screens.SplashScreen
 import com.exemple.facilita.screens.TelaCadastro
+import com.exemple.facilita.screens.TelaCompletarPerfilContratante
 import com.exemple.facilita.screens.TelaLogin
 import com.exemple.facilita.screens.TelaRecuperacaoSenha
+import com.exemple.facilita.screens.TelaTermos
 import com.exemple.facilita.screens.TelaTipoConta
 
 class MainActivity : ComponentActivity() {
@@ -53,12 +55,20 @@ fun AppNavHost(navController: NavHostController) {
         composable("tela_cadastro") {
             TelaCadastro(navController)
         }
+        composable("tela_termos") {
+            TelaTermos(navController)
+        }
         composable("tela_recuperar_senha") {
             TelaRecuperacaoSenha(navController)
         }
         composable("tela_tipo_conta") {
             TelaTipoConta(navController)
         }
+        composable("tela_completar_perfil_contratante") {
+            TelaCompletarPerfilContratante(navController)
+        }
+
+
     }
 }
 

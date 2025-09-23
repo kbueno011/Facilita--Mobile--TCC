@@ -25,7 +25,8 @@ import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.R
 import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
-import com.exemple.facilita.sevice.RetrofitFactory
+import com.exemple.facilita.service.RetrofitFactory
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,7 +34,7 @@ import retrofit2.await
 
 @Composable
 fun TelaLogin(navController: NavController) {
-    val facilitaApi = RetrofitFactory().getUserService()
+    val facilitaApi = RetrofitFactory.getUserService()
     val coroutineScope = rememberCoroutineScope()
 
     var selectedTab by remember { mutableStateOf(0) }

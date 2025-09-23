@@ -251,7 +251,7 @@ fun TelaCadastro(navController: NavController) {
                                     try {
                                         val novoCliente = facilitaApi.saveUser(cadastro).await()
                                         withContext(Dispatchers.Main) {
-                                            navController.navigate("tela_login")
+                                            navController.navigate("tela_termos")
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {

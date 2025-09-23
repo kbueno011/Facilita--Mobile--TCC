@@ -1,4 +1,4 @@
-package com.exemple.facilita.sevice
+package com.exemple.facilita.service
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -24,6 +24,21 @@ class RetrofitFactory {
         return retrofitFactory.create(UserService::class.java)
     }
 
+    // Retrofit para Nominatim (OpenStreetMap)
+    private val retrofitNominatim by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://nominatim.openstreetmap.org/")
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+
+    fun getUserService(): UserService {
+        return retrofitUser.create(UserService::class.java)
+    }
+
+    fun getNominatimApi(): NominatimApi {
+        return retrofitNominatim.create(NominatimApi::class.java)
+    }
+
 
 }
-
