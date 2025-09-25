@@ -3,6 +3,8 @@ package com.exemple.facilita.service
 import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
 import com.exemple.facilita.model.NominatimResult
+import com.exemple.facilita.model.RecuperarSenhaRequest
+import com.exemple.facilita.model.RecuperarSenhaResponse
 import com.exemple.facilita.model.Register
 import retrofit2.Call
 import retrofit2.http.Body
@@ -21,6 +23,11 @@ interface UserService {
     @Headers("Content-Type: application/json")
     @POST("/v1/facilita/usuario/login")
     fun loginUser(@Body user: Login): Call<LoginResponse>
+
+    @Headers("Content-Type: application/json")
+    @POST("/v1/facilita/usuario/recuperar-senha")
+    fun recuperarSenha(@Body request: RecuperarSenhaRequest): Call<RecuperarSenhaResponse>
+
 }
 
 // Serviço para Nominatim (OpenStreetMap)
@@ -32,4 +39,13 @@ interface NominatimApi {
         @Query("addressdetails") addressdetails: Int = 1,
         @Query("limit") limit: Int = 5
     ): List<NominatimResult>
+
+    @GET("reverse")
+    suspend fun reverseGeocode(
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
+        @Query("format") format: String = "json",
+        @Query("addressdetails") addressdetails: Int = 1
+    ): NominatimResult
 }
+

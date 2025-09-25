@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.navigation.runtime.ktx)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,8 +61,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
 
-    implementation("androidx.compose.material3:material3:1.1.2") // ou a versão mais recente
-    implementation("androidx.compose.material:material-icons-extended:1.5.4") // necessário para ícones
+    implementation("androidx.compose.material3:material3:1.1.2")
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
 
     //Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
@@ -70,6 +71,10 @@ dependencies {
     //COIL biblioteca para fazer chamada das img
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.30.1")
 
 }
 

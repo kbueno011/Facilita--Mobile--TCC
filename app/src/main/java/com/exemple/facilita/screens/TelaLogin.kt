@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.R
 import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
+import com.exemple.facilita.model.RecuperarSenhaRequest
 import com.exemple.facilita.service.RetrofitFactory
 
 import kotlinx.coroutines.Dispatchers
@@ -230,10 +231,27 @@ fun TelaLogin(navController: NavController) {
                             modifier = Modifier
                                 .padding(top = 16.dp)
                                 .clickable {
-                                    navController.navigate("tela_recuperar_senha")
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        try {
+                                            val request = RecuperarSenhaRequest(email = email)
+                                            val response = facilitaApi.recuperarSenha(request).await()
+
+                                            withContext(Dispatchers.Main) {
+                                                // Mostra a mensagem da API
+                                                errorMessage = response.message
+                                                // Vai pra tela de recuperação
+                                                navController.navigate("tela_recuperar_senha")
+                                            }
+                                        } catch (e: Exception) {
+                                            withContext(Dispatchers.Main) {
+                                                errorMessage = "Erro ao solicitar recuperação de senha"
+                                            }
+                                        }
+                                    }
                                 }
                         )
                     }
+
 
                     Spacer(modifier = Modifier.height(16.dp))
 

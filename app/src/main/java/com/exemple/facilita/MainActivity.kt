@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.screens.*
+import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.viewmodel.EnderecoViewModel
 
 class MainActivity : ComponentActivity() {
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "splash"
+        startDestination = "tela_endereco"
     ) {
         composable("splash") {
             SplashScreen(navController)
@@ -62,12 +63,18 @@ fun AppNavHost(navController: NavHostController) {
             TelaCompletarPerfilContratante(navController)
         }
         composable("tela_endereco") {
-            val enderecoViewModel: EnderecoViewModel = viewModel() // Sem parâmetros
+            val enderecoViewModel: EnderecoViewModel = viewModel()
+            val retrofitFactory = RetrofitFactory()
+            val nominatimApi = retrofitFactory.getNominatimApi()
+
             TelaEnderecoContent(
                 navController = navController,
-                viewModel = enderecoViewModel
+                viewModel = enderecoViewModel,
+                nominatimApi = nominatimApi
             )
+
         }
+
 
 
     }

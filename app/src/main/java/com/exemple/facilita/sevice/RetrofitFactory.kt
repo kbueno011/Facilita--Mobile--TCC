@@ -14,7 +14,7 @@ class RetrofitFactory {
 
     // Retrofit para sua API local
     private val retrofitUser: Retrofit = Retrofit.Builder()
-        .baseUrl("http://10.0.2.2:8080") // ATENÇÃO: precisa terminar com "/"
+        .baseUrl("https://server-facilita.onrender.com/")
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
@@ -27,7 +27,7 @@ class RetrofitFactory {
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
-                    .header("User-Agent", "facilita-app/1.0 (seuemail@dominio.com)") // obrigatório!
+                    .header("User-Agent", "facilita-app/1.0 (seuemail@dominio.com)")
                     .build()
                 chain.proceed(request)
             }
