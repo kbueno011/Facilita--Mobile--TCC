@@ -2,18 +2,15 @@ package com.exemple.facilita.service
 
 import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
-import com.exemple.facilita.model.NominatimResult
 import com.exemple.facilita.model.RecuperarSenhaRequest
 import com.exemple.facilita.model.RecuperarSenhaResponse
 import com.exemple.facilita.model.Register
 import retrofit2.Call
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
-import retrofit2.http.Query
 
-// Serviço para sua API
+// Serviço para API
 interface UserService {
 
     @Headers("Content-Type: application/json")
@@ -29,23 +26,3 @@ interface UserService {
     fun recuperarSenha(@Body request: RecuperarSenhaRequest): Call<RecuperarSenhaResponse>
 
 }
-
-// Serviço para Nominatim (OpenStreetMap)
-interface NominatimApi {
-    @GET("search")
-    suspend fun searchAddress(
-        @Query("q") query: String,
-        @Query("format") format: String = "json",
-        @Query("addressdetails") addressdetails: Int = 1,
-        @Query("limit") limit: Int = 5
-    ): List<NominatimResult>
-
-    @GET("reverse")
-    suspend fun reverseGeocode(
-        @Query("lat") lat: Double,
-        @Query("lon") lon: Double,
-        @Query("format") format: String = "json",
-        @Query("addressdetails") addressdetails: Int = 1
-    ): NominatimResult
-}
-

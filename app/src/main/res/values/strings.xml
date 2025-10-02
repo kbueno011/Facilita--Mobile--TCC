@@ -6,5 +6,7 @@
     <string name="acompanhe">Acompanhe em tempo real cada etapa do seu pedido</string>
     <string name="conexao">CONEXÃO</string>
     <string name="conecte">Conecte-se a prestadores de confiança, sempre que precisar</string>
-<!--    <string name=""></string>-->
+    <string name="google_maps_key">AIzaSyBKFwfrLdbTreqsOwnpMS9-zt9KD-HEH28</string>
+
+    <!--    <string name=""></string>-->
 </resources>

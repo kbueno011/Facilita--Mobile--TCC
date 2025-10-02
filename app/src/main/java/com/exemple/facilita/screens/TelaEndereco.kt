@@ -1,10 +1,9 @@
 package com.exemple.facilita.screens
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.pm.PackageManager
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,20 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,214 +30,136 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import android.Manifest
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
-import com.exemple.facilita.model.NominatimResult
 import com.exemple.facilita.service.NominatimApi
 import com.exemple.facilita.viewmodel.EnderecoViewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import kotlinx.coroutines.tasks.await
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.AddressComponent
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.model.TypeFilter
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
+import java.util.Locale
 
-// --- Função para obter localização atual ---
-@SuppressLint("MissingPermission")
-suspend fun getCurrentLocation(context: Context): Pair<Double, Double>? {
-    val hasPermission = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-
-    if (!hasPermission) return null
-
-    val fusedLocationClient: FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(context)
-    val location = fusedLocationClient.lastLocation.await()
-    return location?.let { it.latitude to it.longitude }
+// ---- Helpers ----
+private fun comp(components: List<AddressComponent>, vararg keys: String): String {
+    val set = keys.toSet()
+    return components.firstOrNull { c -> c.types.any { it in set } }?.name.orEmpty()
 }
 
-// --- Tela de endereço ---
-@OptIn(ExperimentalPermissionsApi::class)
+private fun bairroFrom(comps: List<AddressComponent>): String =
+    comp(comps, "sublocality_level_1", "sublocality", "neighborhood")
+
+private fun cidadeFrom(comps: List<AddressComponent>): String =
+    comp(comps, "locality", "administrative_area_level_2")
+
+private fun formatRuaBairroCidadeNumero(
+    rua: String?, bairro: String?, cidade: String?, numero: String?
+): String {
+    val partes = buildList {
+        rua?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
+        bairro?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
+        cidade?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
+        numero?.trim()?.takeIf { it.isNotEmpty() }?.let { add("Nº $it") }
+    }
+    return partes.joinToString(", ")
+}
+
 @Composable
 fun TelaEnderecoContent(
     navController: NavHostController,
     viewModel: EnderecoViewModel,
-    nominatimApi: NominatimApi
+    nominatimApi: NominatimApi // não usado nesta versão
 ) {
     val context = LocalContext.current
-    var query by remember { mutableStateOf("") }
-    val sugestoes = remember { mutableStateListOf<NominatimResult>() }
-    var userLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
 
-    // --- Permissão ---
-    val locationPermissionState = rememberPermissionState(
-        Manifest.permission.ACCESS_FINE_LOCATION
-    )
-
+    // Inicializa o Places (use a key do strings.xml)
     LaunchedEffect(Unit) {
-        if (!locationPermissionState.status.isGranted) {
-            locationPermissionState.launchPermissionRequest()
-        } else {
-            userLocation = getCurrentLocation(context)
+        if (!Places.isInitialized()) {
+            val keyResId = context.resources.getIdentifier("google_maps_key", "string", context.packageName)
+            val apiKey = if (keyResId != 0) context.getString(keyResId) else "SUA_API_KEY_AQUI"
+            Places.initialize(context.applicationContext, apiKey, Locale("pt", "BR"))
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // --- MAPA (área superior) ---
-        Box(
+    var enderecoCurto by remember { mutableStateOf(viewModel.endereco.value) }
+
+    // Launcher do Autocomplete (overlay)
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val place = Autocomplete.getPlaceFromIntent(result.data!!)
+            val comps = place.addressComponents?.asList().orEmpty()
+
+            val numero = comp(comps, "street_number")
+            val rua    = comp(comps, "route").ifEmpty { place.name.orEmpty() }
+            val bairro = bairroFrom(comps)
+            val cidade = cidadeFrom(comps)
+
+            val curto = formatRuaBairroCidadeNumero(rua, bairro, cidade, numero)
+                .ifBlank { place.address.orEmpty() }
+
+            // Preenche o ViewModel no seu formato
+            viewModel.road.value = rua
+            viewModel.houseNumber.value = numero
+            viewModel.city.value = cidade
+            viewModel.displayName.value = curto
+            viewModel.endereco.value = curto
+
+            enderecoCurto = curto
+        }
+    }
+
+    // Intenção do Autocomplete (BR + endereços)
+    fun openAutocomplete() {
+        val fields = listOf(
+            Place.Field.ADDRESS_COMPONENTS,
+            Place.Field.ADDRESS,
+            Place.Field.LAT_LNG,
+            Place.Field.NAME
+        )
+        val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
+            .setCountries(listOf("BR"))
+            // TypeFilter.ADDRESS no Intent usa a API nova com lista de strings:
+            .setTypesFilter(listOf(TypeFilter.ADDRESS.toString().lowercase()))
+            .build(context)
+        launcher.launch(intent)
+    }
+
+    // ---- UI simples: um campo "Toque para buscar" + linha com endereço escolhido ----
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Endereço", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = enderecoCurto,
+            onValueChange = { /* leitura somente; o overlay cuida da digitação */ },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp)
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) { }
+                .clickable { openAutocomplete() },
+            enabled = false,
+            placeholder = { Text("Digite rua e número (ex.: Av. Paulista 1200)") },
+            leadingIcon = {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF019D31))
+            },
+            supportingText = { Text("Toque para procurar", color = Color.Gray) }
+        )
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                Text(
-                    text = "MAPA AQUI",
-                    modifier = Modifier.align(Alignment.Center)
-                )
+        Spacer(Modifier.height(24.dp))
 
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = { Text("Buscar endereço") },
-                    singleLine = true,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                )
+        if (enderecoCurto.isNotBlank()) {
+            Text("Endereço selecionado:", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF019D31))
+                Spacer(Modifier.width(8.dp))
+                Text(enderecoCurto, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
             }
         }
-
-        // --- BUSCA COM PROXIMIDADE ---
-        LaunchedEffect(query, userLocation) {
-            if (query.length > 3 && userLocation != null) {
-                try {
-                    val (lat, lon) = userLocation!!
-                    val results = nominatimApi.searchAddress(
-                        query = query + "&lat=$lat&lon=$lon"
-                    )
-                    sugestoes.clear()
-                    sugestoes.addAll(results)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    sugestoes.clear()
-                }
-            } else {
-                sugestoes.clear()
-            }
-        }
-
-        // --- LISTA DE RESULTADOS ---
-        if (sugestoes.isNotEmpty()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-            ) {
-                items(sugestoes) { endereco ->
-                    EnderecoItem(endereco) {
-                        viewModel.atualizarEndereco(
-                            house = endereco.address?.house_number ?: "",
-                            roadName = endereco.address?.road ?: "",
-                            cityName = endereco.address?.city ?: "",
-                            display = endereco.display_name
-                        )
-                        query = endereco.display_name
-                        sugestoes.clear()
-                    }
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Recentes",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                listOf(
-                    "Rua Vitória, cohab 2, Carapicuíba",
-                    "Rua Manaus, cohab 2, Carapicuíba",
-                    "Rua Belem, cohab 2, Carapicuíba"
-                ).forEach { endereco ->
-                    EnderecoItemSimples(titulo = endereco) {
-                        query = endereco
-                    }
-                }
-            }
-        }
-    }
-}
-
-// --- Composable para item de endereço ---
-@Composable
-fun EnderecoItem(endereco: NominatimResult, onClick: () -> Unit) {
-    val titulo = buildString {
-        val road = endereco.address?.road ?: ""
-        append(road)
-        endereco.address?.house_number?.let { if (road.isNotEmpty()) append(", $it") else append(it) }
-    }.ifBlank { endereco.display_name }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 10.dp, horizontal = 8.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = Color(0xFF019D31)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = titulo,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                )
-                Text(
-                    text = endereco.display_name,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        }
-        Divider(modifier = Modifier.padding(top = 10.dp))
-    }
-}
-
-@Composable
-fun EnderecoItemSimples(titulo: String, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 10.dp, horizontal = 8.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = Color(0xFF019D31)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = titulo,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-        Divider(modifier = Modifier.padding(top = 10.dp))
     }
 }
