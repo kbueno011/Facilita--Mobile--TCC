@@ -65,12 +65,12 @@ fun AppNavHost(navController: NavHostController) {
         composable("tela_endereco") {
             val enderecoViewModel: EnderecoViewModel = viewModel()
             val retrofitFactory = RetrofitFactory()
-            val nominatimApi = retrofitFactory.getNominatimApi()
+
 
             TelaEnderecoContent(
                 navController = navController,
                 viewModel = enderecoViewModel,
-                nominatimApi = nominatimApi
+
             )
 
         }
