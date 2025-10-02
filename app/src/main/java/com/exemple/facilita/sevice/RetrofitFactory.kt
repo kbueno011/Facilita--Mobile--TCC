@@ -14,7 +14,7 @@ class RetrofitFactory {
 
     // Retrofit para sua API local
     private val retrofitUser: Retrofit = Retrofit.Builder()
-        .baseUrl("https://server-facilita.onrender.com/")
+        .baseUrl("http://10.107.144.7:8080")
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
