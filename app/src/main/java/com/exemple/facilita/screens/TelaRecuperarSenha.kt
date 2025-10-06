@@ -68,7 +68,7 @@ fun TelaRecuperacaoSenha(navController: NavController) {
 
                 Text(
                     text = buildAnnotatedString {
-                        append("Informe o código de 5 dígitos que foi enviado para o e-mail ")
+                        append("Informe o código de 5 dígitos que foi enviado para o e-mail")
                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                             append("m*****@gmail.com")
                         }

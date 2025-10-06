@@ -1,12 +1,14 @@
 package com.exemple.facilita.screens
 
 import android.util.Patterns
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -32,12 +34,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.await
+import androidx.compose.foundation.layout.FlowRow
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TelaCadastro(navController: NavController) {
 
     val facilitaApi = remember { RetrofitFactory().getUserService() }
-
     val coroutineScope = rememberCoroutineScope()
 
     // Estados dos campos
@@ -48,7 +51,7 @@ fun TelaCadastro(navController: NavController) {
     var senha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
 
-    // Estados para erros
+    // Estados de erro
     var isNomeError by remember { mutableStateOf(false) }
     var isEmailError by remember { mutableStateOf(false) }
     var isConfirmarEmailError by remember { mutableStateOf(false) }
@@ -56,13 +59,19 @@ fun TelaCadastro(navController: NavController) {
     var isSenhaError by remember { mutableStateOf(false) }
     var isConfirmarSenhaError by remember { mutableStateOf(false) }
 
-    // Função de validação
+    // Regras de senha
+    val hasUppercase = senha.any { it.isUpperCase() }
+    val hasLowercase = senha.any { it.isLowerCase() }
+    val hasDigit = senha.any { it.isDigit() }
+    val hasSpecial = senha.any { !it.isLetterOrDigit() }
+    val hasMinLength = senha.length >= 6
+
     fun validar(): Boolean {
         isNomeError = nome.isBlank()
         isEmailError = !Patterns.EMAIL_ADDRESS.matcher(email).matches()
         isConfirmarEmailError = email != confirmarEmail || confirmarEmail.isEmpty()
-        isTelefoneError = telefone.length < 10 || !telefone.matches(Regex("^[0-9()\\-\\s+]+\$"))
-        isSenhaError = senha.length < 6
+        isTelefoneError = telefone.length < 10 || !telefone.matches(Regex("^[0-9()\\-\\s+]+$"))
+        isSenhaError = !(hasUppercase && hasLowercase && hasDigit && hasSpecial && hasMinLength)
         isConfirmarSenhaError = senha != confirmarSenha || confirmarSenha.isEmpty()
         return !isNomeError && !isEmailError && !isConfirmarEmailError &&
                 !isTelefoneError && !isSenhaError && !isConfirmarSenhaError
@@ -78,7 +87,7 @@ fun TelaCadastro(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Parte superior com logo e textura
+            // Topo com logo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,7 +114,7 @@ fun TelaCadastro(navController: NavController) {
                 )
             }
 
-            // Card branco da tela
+            // Card branco
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -145,7 +154,7 @@ fun TelaCadastro(navController: NavController) {
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = email,
@@ -163,7 +172,7 @@ fun TelaCadastro(navController: NavController) {
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = confirmarEmail,
@@ -181,7 +190,7 @@ fun TelaCadastro(navController: NavController) {
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = telefone,
@@ -199,8 +208,9 @@ fun TelaCadastro(navController: NavController) {
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
+                    // Campo de senha
                     OutlinedTextField(
                         value = senha,
                         onValueChange = {
@@ -212,13 +222,25 @@ fun TelaCadastro(navController: NavController) {
                         leadingIcon = { Icon(Icons.Default.Lock, null) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        isError = isSenhaError,
-                        supportingText = {
-                            if (isSenhaError) Text("Mínimo 6 caracteres")
-                        }
+                        isError = isSenhaError
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    // ✅ Regras lado a lado (compactas)
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        maxItemsInEachRow = 4,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        PasswordRequirement("Maiúscula", hasUppercase)
+                        PasswordRequirement("Minúscula", hasLowercase)
+                        PasswordRequirement("Número", hasDigit)
+                        PasswordRequirement("Especial", hasSpecial)
+                        PasswordRequirement("Minimo de 6 caracteres", hasMinLength)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = confirmarSenha,
@@ -237,7 +259,7 @@ fun TelaCadastro(navController: NavController) {
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
                         onClick = {
@@ -250,7 +272,7 @@ fun TelaCadastro(navController: NavController) {
                                 )
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
-                                        val novoCliente = facilitaApi.saveUser(cadastro).await()
+                                        facilitaApi.saveUser(cadastro).await()
                                         withContext(Dispatchers.Main) {
                                             navController.navigate("tela_termos")
                                         }
@@ -291,7 +313,7 @@ fun TelaCadastro(navController: NavController) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -315,6 +337,32 @@ fun TelaCadastro(navController: NavController) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PasswordRequirement(text: String, isMet: Boolean) {
+    val color by animateColorAsState(
+        targetValue = if (isMet) Color(0xFF06C755) else Color.Gray,
+        label = "passwordColor"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = text,
+            color = color,
+            fontSize = 12.sp
+        )
     }
 }
 

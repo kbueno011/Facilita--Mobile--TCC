@@ -12,7 +12,7 @@ class RetrofitFactory {
         .create()
 
     private val retrofitUser: Retrofit = Retrofit.Builder()
-        .baseUrl("http://10.107.144.7:8080")
+        .baseUrl("https://servidor-facilita.onrender.com/")
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 

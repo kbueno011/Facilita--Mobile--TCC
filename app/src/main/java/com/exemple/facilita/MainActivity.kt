@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "tela_endereco"
+        startDestination = "tela_tipo_conta"
     ) {
         composable("splash") {
             SplashScreen(navController)
