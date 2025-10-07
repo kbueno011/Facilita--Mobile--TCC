@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "tela_montar_servico"
+        startDestination = "tela_home"
     ) {
         composable("splash") {
             SplashScreen(navController)
@@ -79,6 +79,12 @@ fun AppNavHost(navController: NavHostController) {
         }
         composable("tela_montar_servico") {
             TelaMontarServico(navController)
+        }
+        composable("tela_perfil") {
+            TelaPerfil(navController)
+        }
+        composable("tela_status_pagamento") {
+            TelaStatusPagamento(navController)
         }
 
 

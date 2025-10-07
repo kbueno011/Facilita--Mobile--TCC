@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.exemple.facilita.components.BottomNavBar  // ⬅ importa sua navbar global
 
 @Composable
 fun TelaMontarServico(navController: NavController) {
@@ -31,9 +32,7 @@ fun TelaMontarServico(navController: NavController) {
     var opcaoSelecionada by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar()
-        },
+        bottomBar = { BottomNavBar(navController) }, // ⬅ usa a navbar global
         containerColor = Color(0xFFF4F4F4)
     ) { innerPadding ->
 
@@ -42,7 +41,7 @@ fun TelaMontarServico(navController: NavController) {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(Color(0xFFF4F4F4)),
-            verticalArrangement = Arrangement.SpaceBetween // distribui conteúdo e botão
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
 
             Column {
@@ -66,7 +65,10 @@ fun TelaMontarServico(navController: NavController) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowLeft,
                             contentDescription = "Voltar",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.clickable {
+                                navController.popBackStack()
+                            }
                         )
                         Spacer(modifier = Modifier.width(65.dp))
                         Text(
@@ -80,7 +82,6 @@ fun TelaMontarServico(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Descrição
                 Text(
                     text = "Descreva o que você precisa e escolha como deseja receber",
                     fontWeight = FontWeight.Bold,
@@ -91,7 +92,6 @@ fun TelaMontarServico(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Título do pedido
                 Text(
                     text = "Entregar em",
                     fontSize = 15.sp,
@@ -101,7 +101,6 @@ fun TelaMontarServico(navController: NavController) {
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-                // Card de endereço
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -130,7 +129,6 @@ fun TelaMontarServico(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Título do pedido
                 Text(
                     text = "Pedido",
                     fontSize = 15.sp,
@@ -140,7 +138,6 @@ fun TelaMontarServico(navController: NavController) {
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -172,11 +169,8 @@ fun TelaMontarServico(navController: NavController) {
                             colors = TextFieldDefaults.colors(
                                 unfocusedContainerColor = Color.Transparent,
                                 focusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                errorContainerColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent
+                                focusedIndicatorColor = Color.Transparent
                             )
                         )
                     }
@@ -193,7 +187,6 @@ fun TelaMontarServico(navController: NavController) {
                     "Retirar pacote no correio"
                 )
 
-                // Cards de sugestões
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier
@@ -233,7 +226,6 @@ fun TelaMontarServico(navController: NavController) {
                 }
             }
 
-            // Botão "Confirmar Serviço" mais embaixo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -254,35 +246,6 @@ fun TelaMontarServico(navController: NavController) {
                     fontSize = 16.sp
                 )
             }
-        }
-    }
-}
-
-// Barra inferior
-@Composable
-fun BottomNavigationBar() {
-    NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
-        val itens = listOf(
-            Icons.Default.Home to "Home",
-            Icons.Default.Search to "Buscar",
-            Icons.Default.List to "Pedidos",
-            Icons.Default.AccountBalanceWallet to "Carteira",
-            Icons.Default.Person to "Perfil"
-        )
-
-        itens.forEach { (icone, label) ->
-            NavigationBarItem(
-                selected = false,
-                onClick = { },
-                icon = { Icon(icone, contentDescription = label, tint = Color.Gray) },
-                label = {
-                    Text(
-                        label,
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                }
-            )
         }
     }
 }
