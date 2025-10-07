@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "tela_recuperar_senha"
+        startDestination = "tela_montar_servico"
     ) {
         composable("splash") {
             SplashScreen(navController)
@@ -76,6 +76,9 @@ fun AppNavHost(navController: NavHostController) {
         composable("tela_nova_senha/{codigo}") { backStackEntry ->
             val codigo = backStackEntry.arguments?.getString("codigo") ?: ""
             TelaNovaSenha(navController, codigo)
+        }
+        composable("tela_montar_servico") {
+            TelaMontarServico(navController)
         }
 
 

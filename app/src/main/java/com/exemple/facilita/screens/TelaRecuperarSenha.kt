@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.R
+import com.exemple.facilita.model.RecuperarSenhaResponse
 import com.exemple.facilita.model.RecuperarSenhaTelefoneRequest
 import com.exemple.facilita.model.VerificarCodigoRequest
 import com.exemple.facilita.model.VerificarSenhaResponse
@@ -38,13 +39,12 @@ fun TelaRecuperacaoSenha(navController: NavController) {
     var code by remember { mutableStateOf(List(5) { "" }) }
     var timer by remember { mutableStateOf(30) }
     var isLoading by remember { mutableStateOf(false) }
+    var showPhoneField by remember { mutableStateOf(false) }
+    var phoneNumber by remember { mutableStateOf("") }
 
     val context = LocalContext.current
 
-    var showPhoneInput by remember { mutableStateOf(false) }
-    var telefone by remember { mutableStateOf("") }
-    var isSendingPhoneRequest by remember { mutableStateOf(false) }
-
+    // Contador regressivo
     LaunchedEffect(Unit) {
         while (timer > 0) {
             delay(1000)
@@ -58,7 +58,6 @@ fun TelaRecuperacaoSenha(navController: NavController) {
             .background(Color(0xFF444444)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Parte branca
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -80,10 +79,7 @@ fun TelaRecuperacaoSenha(navController: NavController) {
 
                 Text(
                     text = buildAnnotatedString {
-                        append("Informe o código de 5 dígitos que foi enviado para o e-mail ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("m*****@gmail.com")
-                        }
+                        append("Informe o código de 5 dígitos que foi enviado por SMS para o número informado.")
                     },
                     fontSize = 14.sp,
                     color = Color.Black
@@ -91,6 +87,7 @@ fun TelaRecuperacaoSenha(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Campos do código
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth(),
@@ -122,208 +119,88 @@ fun TelaRecuperacaoSenha(navController: NavController) {
                     text = if (timer > 0) "Reenviar o código em $timer segundos." else "Reenviar código",
                     fontSize = 14.sp,
                     color = if (timer > 0) Color.Gray else Color(0xFF06C755),
-                    fontWeight = if (timer == 0) FontWeight.Bold else FontWeight.Normal
+                    fontWeight = if (timer == 0) FontWeight.Normal else FontWeight.Bold
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                TextButton(
-                    onClick = { showPhoneInput = !showPhoneInput }
-                ) {
-                    Text(
-                        text = if (!showPhoneInput) "Tentar outro método." else "Usar e-mail novamente",
-                        fontSize = 14.sp,
-                        color = Color(0xFF06C755)
-                    )
-                }
-
-                if (showPhoneInput) {
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                if (!showPhoneField) {
+                    TextButton(onClick = { showPhoneField = true }) {
+                        Text(
+                            text = "Tentar outro método.",
+                            fontSize = 14.sp,
+                            color = Color(0xFF06C755)
+                        )
+                    }
+                } else {
+                    Column {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
+                            Text(
+                                text = "+55",
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .background(Color(0xFFE0E0E0), shape = RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "+55", color = Color.Black, fontWeight = FontWeight.Bold)
-                            }
-
+                                    .background(Color(0xFFEAEAEA), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 16.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
-
                             OutlinedTextField(
-                                value = telefone,
-                                onValueChange = { telefone = it.filter { char -> char.isDigit() } },
-                                placeholder = { Text("11 95746-4535") },
+                                value = phoneNumber,
+                                onValueChange = {
+                                    if (it.length <= 11) phoneNumber = it.filter { c -> c.isDigit() }
+                                },
+                                placeholder = { Text("11987654321") },
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Button(
                             onClick = {
-                                if (telefone.isBlank()) {
-                                    Toast.makeText(context, "Preencha o telefone", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                val digits = telefone.filter { it.isDigit() }
-                                if (digits.length < 10) {
-                                    Toast.makeText(context, "Telefone inválido", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
+                                if (phoneNumber.length < 10) {
+                                    Toast.makeText(context, "Número inválido.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    isLoading = true
+                                    val telefoneCompleto = "+55$phoneNumber"
+                                    val service = RetrofitFactory().getUserService()
 
-                                val numeroCompleto = "+55$digits"
+                                    service.recuperarSenhaTelefone(
+                                        RecuperarSenhaTelefoneRequest(
+                                            telefoneCompleto
+                                        )
+                                    )
 
-                                isSendingPhoneRequest = true
-                                val service = RetrofitFactory().getUserService()
-                                val request = RecuperarSenhaTelefoneRequest(telefone = numeroCompleto)
 
-                                service.recuperarSenhaTelefone(request)
-                                    .enqueue(object : Callback<com.exemple.facilita.model.RecuperarSenhaResponse> {
-                                        override fun onResponse(
-                                            call: Call<com.exemple.facilita.model.RecuperarSenhaResponse>,
-                                            response: Response<com.exemple.facilita.model.RecuperarSenhaResponse>
-                                        ) {
-                                            isSendingPhoneRequest = false
-                                            if (response.isSuccessful) {
-                                                Toast.makeText(
-                                                    context,
-                                                    response.body()?.message ?: "Código enviado!",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                                showPhoneInput = false
-                                            } else {
-                                                Toast.makeText(context, "Erro: ${response.code()}", Toast.LENGTH_SHORT).show()
+                                        .enqueue(object : Callback<RecuperarSenhaResponse> {
+                                            override fun onResponse(
+                                                call: Call<RecuperarSenhaResponse>,
+                                                response: Response<RecuperarSenhaResponse>
+                                            ) {
+                                                isLoading = false
+                                                if (response.isSuccessful) {
+                                                    Toast.makeText(context, "Código reenviado para $telefoneCompleto", Toast.LENGTH_SHORT).show()
+                                                    showPhoneField = false
+                                                    timer = 30
+                                                } else {
+                                                    Toast.makeText(context, "Falha ao reenviar código.", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
-                                        }
 
-                                        override fun onFailure(
-                                            call: Call<com.exemple.facilita.model.RecuperarSenhaResponse>,
-                                            t: Throwable
-                                        ) {
-                                            isSendingPhoneRequest = false
-                                            Toast.makeText(context, "Falha na conexão.", Toast.LENGTH_SHORT).show()
-                                        }
-                                    })
+                                            override fun onFailure(call: Call<RecuperarSenhaResponse>, t: Throwable) {
+                                                isLoading = false
+                                                Toast.makeText(context, "Erro de conexão.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        })
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
                             shape = RoundedCornerShape(50),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                            contentPadding = PaddingValues()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        brush = Brush.horizontalGradient(listOf(Color(0xFF019D31), Color(0xFF06C755))),
-                                        shape = RoundedCornerShape(50)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isSendingPhoneRequest) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                } else {
-                                    Text(
-                                        text = "Enviar código por SMS",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Botão verificar código
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = {
-                            val codigoCompleto = code.joinToString("")
-                            if (codigoCompleto.length < 5) {
-                                Toast.makeText(
-                                    context,
-                                    "Preencha todos os dígitos do código",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                isLoading = true
-                                val service = RetrofitFactory().getUserService()
-                                val request = VerificarCodigoRequest(codigo = codigoCompleto)
-
-                                service.verificarCodigo(request)
-                                    .enqueue(object : Callback<VerificarSenhaResponse> {
-                                        override fun onResponse(
-                                            call: Call<VerificarSenhaResponse>,
-                                            response: Response<VerificarSenhaResponse>
-                                        ) {
-                                            isLoading = false
-                                            if (response.isSuccessful && response.body()?.sucesso == true) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Código verificado com sucesso!",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                                navController.navigate("tela_nova_senha/${codigoCompleto}")
-                                            } else {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Código inválido ou expirado.",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-                                        }
-
-                                        override fun onFailure(
-                                            call: Call<VerificarSenhaResponse>,
-                                            t: Throwable
-                                        ) {
-                                            isLoading = false
-                                            Toast.makeText(
-                                                context,
-                                                "Erro na conexão. Tente novamente.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    })
-                            }
-                        },
-                        modifier = Modifier
-                            .width(140.dp)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFF019D31), Color(0xFF06C755))
-                                    ),
-                                    shape = RoundedCornerShape(50)
-                                ),
-                            contentAlignment = Alignment.Center
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06C755))
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
@@ -332,15 +209,54 @@ fun TelaRecuperacaoSenha(navController: NavController) {
                                     modifier = Modifier.size(24.dp)
                                 )
                             } else {
-                                Text(
-                                    text = "Verificar",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
+                                Text("Enviar código", color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                // Botão verificar código
+                Button(
+                    onClick = {
+                        val codigoCompleto = code.joinToString("")
+                        if (codigoCompleto.length < 5) {
+                            Toast.makeText(context, "Preencha todos os dígitos.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            isLoading = true
+                            val service = RetrofitFactory().getUserService()
+                            val request = VerificarCodigoRequest(codigo = codigoCompleto)
+
+                            service.verificarCodigo(request)
+                                .enqueue(object : Callback<VerificarSenhaResponse> {
+                                    override fun onResponse(
+                                        call: Call<VerificarSenhaResponse>,
+                                        response: Response<VerificarSenhaResponse>
+                                    ) {
+                                        isLoading = false
+                                        if (response.isSuccessful && response.body()?.sucesso == true) {
+                                            Toast.makeText(context, "Código verificado!", Toast.LENGTH_SHORT).show()
+                                            navController.navigate("tela_nova_senha/${codigoCompleto}")
+                                        } else {
+                                            Toast.makeText(context, "Código inválido.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+
+                                    override fun onFailure(call: Call<VerificarSenhaResponse>, t: Throwable) {
+                                        isLoading = false
+                                        Toast.makeText(context, "Erro de conexão.", Toast.LENGTH_SHORT).show()
+                                    }
+                                })
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06C755))
+                ) {
+                    Text("Verificar", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -360,7 +276,6 @@ fun TelaRecuperacaoSenha(navController: NavController) {
                     .width(170.dp)
                     .height(190.dp)
             )
-
             Image(
                 painter = painterResource(R.drawable.logotcc),
                 contentDescription = "Logo Facilita",
@@ -370,7 +285,6 @@ fun TelaRecuperacaoSenha(navController: NavController) {
                     .height(120.dp)
                     .width(120.dp)
             )
-
             Image(
                 painter = painterResource(R.drawable.iconcarromenu),
                 contentDescription = "Ilustração carro",
@@ -387,5 +301,5 @@ fun TelaRecuperacaoSenha(navController: NavController) {
 @Composable
 fun TelaRecuperacaoSenhaPreview() {
     val navController = rememberNavController()
-    TelaRecuperacaoSenha(navController = navController)
+    TelaRecuperacaoSenha(navController)
 }
