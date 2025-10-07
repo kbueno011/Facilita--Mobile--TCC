@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "tela_tipo_conta"
+        startDestination = "tela_recuperar_senha"
     ) {
         composable("splash") {
             SplashScreen(navController)
@@ -65,18 +65,17 @@ fun AppNavHost(navController: NavHostController) {
         composable("tela_endereco") {
             val enderecoViewModel: EnderecoViewModel = viewModel()
             val retrofitFactory = RetrofitFactory()
-
-
             TelaEnderecoContent(
                 navController = navController,
                 viewModel = enderecoViewModel,
-
             )
-
         }
-
         composable("tela_home") {
             TelaHome(navController)
+        }
+        composable("tela_nova_senha/{codigo}") { backStackEntry ->
+            val codigo = backStackEntry.arguments?.getString("codigo") ?: ""
+            TelaNovaSenha(navController, codigo)
         }
 
 
