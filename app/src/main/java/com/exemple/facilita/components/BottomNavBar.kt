@@ -22,7 +22,7 @@ fun BottomNavBar(navController: NavController) {
     val items = listOf(
         BottomNavItem("Home", Icons.Default.Home, "tela_home"),
         BottomNavItem("Buscar", Icons.Default.Search, "tela_buscar"),
-        BottomNavItem("Pedidos", Icons.Default.List, "tela_pedidos"),
+        BottomNavItem("Pedidos", Icons.Default.List, "tela_historico_pedido"),
         BottomNavItem("Carteira", Icons.Default.AccountBalanceWallet, "tela_carteira"),
         BottomNavItem("Perfil", Icons.Default.Person, "tela_perfil")
     )
