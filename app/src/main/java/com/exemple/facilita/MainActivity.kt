@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.screens.*
 import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.viewmodel.EnderecoViewModel
+import com.exemplo.facilita.screens.TelaBuscarServico
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +33,7 @@ fun AppNavHost(navController: NavHostController) {
         navController = navController,
         startDestination = "tela_home"
     ) {
-        composable("splash") {
+        composable("tela_home") {
             SplashScreen(navController)
         }
         composable("tela_inicio1") {
@@ -91,6 +92,9 @@ fun AppNavHost(navController: NavHostController) {
         }
         composable("tela_pedido_confirmado") {
             TelaPedidoConfirmado(navController)
+        }
+        composable("tela_buscar_categoria") {
+            TelaBuscarServico(navController)
         }
 
 
