@@ -38,7 +38,7 @@ fun TelaLogin(navController: NavController) {
     val facilitaApi = remember { RetrofitFactory().getUserService() }
 
     val coroutineScope = rememberCoroutineScope()
-    var tentativaSenhaErrada by remember { mutableStateOf(0) } // contador de tentativas
+    var tentativaSenhaErrada by remember { mutableStateOf(0) }
 
     var selectedTab by remember { mutableStateOf(0) }
     var email by remember { mutableStateOf("") }
@@ -255,7 +255,7 @@ fun TelaLogin(navController: NavController) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // --- Cadastro ---
+
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
