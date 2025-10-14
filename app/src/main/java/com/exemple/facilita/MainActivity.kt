@@ -9,24 +9,32 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.exemple.facilita.screens.*
 import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.viewmodel.EnderecoViewModel
 import com.exemplo.facilita.screens.TelaBuscarServico
+import com.google.android.libraries.places.api.Places
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 🔹 Inicializa Places uma vez aqui
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, "AIzaSyBKFwfrLdbTreqsOwnpMS9-zt9KD-HEH28")
+        }
+
         setContent {
             val navController = rememberNavController()
             AppNavHost(navController)
         }
     }
 }
-
 @Composable
 fun AppNavHost(navController: NavHostController) {
     NavHost(
@@ -78,9 +86,14 @@ fun AppNavHost(navController: NavHostController) {
             val codigo = backStackEntry.arguments?.getString("codigo") ?: ""
             TelaNovaSenha(navController, codigo)
         }
-        composable("tela_montar_servico") {
-            TelaMontarServico(navController)
+        composable(
+            route = "tela_montar_servico/{endereco}",
+            arguments = listOf(navArgument("endereco") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val endereco = backStackEntry.arguments?.getString("endereco")
+            TelaMontarServico(navController = navController, endereco = endereco)
         }
+
         composable("tela_perfil") {
             TelaPerfil(navController)
         }

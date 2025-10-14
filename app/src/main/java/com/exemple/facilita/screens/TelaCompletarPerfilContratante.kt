@@ -1,36 +1,19 @@
 package com.exemple.facilita.screens
 
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,60 +26,88 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.exemple.facilita.model.CompletarPerfilRequest
+import com.exemple.facilita.model.CompletarPerfilResponse
+import com.exemple.facilita.service.RetrofitFactory
 import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.widget.Autocomplete
-import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
-import java.util.Locale
+import com.google.android.libraries.places.api.model.AutocompletePrediction
+import com.google.android.libraries.places.api.model.AutocompleteSessionToken
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaCompletarPerfilContratante(navController: NavController) {
     val context = LocalContext.current
 
-    // Inicializa o Places API
+    // Inicializa o Google Places API
     LaunchedEffect(Unit) {
         if (!Places.isInitialized()) {
-            val keyResId = context.resources.getIdentifier("google_maps_key", "string", context.packageName)
-            val apiKey = if (keyResId != 0) context.getString(keyResId) else "SUA_API_KEY_AQUI"
-            Places.initialize(context.applicationContext, apiKey, Locale("pt", "BR"))
+            Places.initialize(context, "SUA_CHAVE_API_GOOGLE_PLACES_AQUI")
         }
     }
 
+    val placesClient = remember { Places.createClient(context) }
+    val sessionToken = remember { AutocompleteSessionToken.newInstance() }
+
+    // Estados dos campos
     var endereco by remember { mutableStateOf("") }
+    var sugestoes by remember { mutableStateOf(listOf<AutocompletePrediction>()) }
+    var exibirSugestoes by remember { mutableStateOf(false) }
+
     var cpf by remember { mutableStateOf("") }
     var necessidade by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
 
-    val autocompleteLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val place = Autocomplete.getPlaceFromIntent(result.data!!)
-            endereco = place.address.orEmpty()
+    // Função para enviar os dados à API
+    fun completarPerfil() {
+        if (cpf.isBlank() || necessidade.isBlank() || endereco.isBlank()) {
+            Toast.makeText(context, "Preencha todos os campos antes de continuar", Toast.LENGTH_SHORT).show()
+            return
         }
-    }
 
-    fun openAutocomplete() {
-        val fields = listOf(
-            Place.Field.ADDRESS,
-            Place.Field.LAT_LNG,
-            Place.Field.NAME
+        loading = true
+
+        val request = CompletarPerfilRequest(
+            id_localizacao = 1,
+            necessidade = necessidade,
+            cpf = cpf
         )
-        val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
-            .setCountries(listOf("BR"))
-            .setTypesFilter(listOf("address"))
-            .build(context)
-        autocompleteLauncher.launch(intent)
+
+        val userService = RetrofitFactory().getUserService()
+        val call = userService.cadastrarContratante(request)
+
+        call.enqueue(object : Callback<CompletarPerfilResponse> {
+            override fun onResponse(
+                call: Call<CompletarPerfilResponse>,
+                response: Response<CompletarPerfilResponse>
+            ) {
+                loading = false
+                if (response.isSuccessful) {
+                    Toast.makeText(context, "Perfil atualizado com sucesso!", Toast.LENGTH_SHORT).show()
+                    navController.navigate("tela_home")
+                } else {
+                    Toast.makeText(context, "Erro ao atualizar perfil", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<CompletarPerfilResponse>, t: Throwable) {
+                loading = false
+                Toast.makeText(context, "Falha de conexão: ${t.message}", Toast.LENGTH_LONG).show()
+            }
+        })
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF9FAFB))
-            .padding(top = 50.dp, bottom = 20.dp, start = 24.dp, end = 24.dp),
+            .padding(horizontal = 24.dp, vertical = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
+        // FOTO
         Image(
             painter = rememberAsyncImagePainter("https://i.pravatar.cc/150?img=7"),
             contentDescription = "Foto de perfil",
@@ -106,7 +117,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
             contentScale = ContentScale.Crop
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
 
         Text(
             text = "Luiz da Silva",
@@ -115,7 +126,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
             color = Color(0xFF1C1C1E)
         )
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(28.dp))
 
         Text(
             "Complete seu perfil",
@@ -124,24 +135,69 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
             color = Color(0xFF000000)
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // CAMPO ENDEREÇO
-        OutlinedTextField(
-            value = endereco,
-            onValueChange = { endereco = it },
-            label = { Text("Endereço completo") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { openAutocomplete() },
-            readOnly = true,
-            shape = RoundedCornerShape(8.dp),
-            colors = outlinedTextFieldColors()
-        )
+        // ENDEREÇO com autocomplete igual ao da tela de cadastro
+        Box {
+            OutlinedTextField(
+                value = endereco,
+                onValueChange = {
+                    endereco = it
+                    exibirSugestoes = true
+
+                    if (it.length > 2) {
+                        val request = FindAutocompletePredictionsRequest.builder()
+                            .setQuery(it)
+                            .setSessionToken(sessionToken)
+                            .build()
+
+                        placesClient.findAutocompletePredictions(request)
+                            .addOnSuccessListener { response ->
+                                sugestoes = response.autocompletePredictions
+                            }
+                            .addOnFailureListener {
+                                sugestoes = emptyList()
+                            }
+                    } else {
+                        sugestoes = emptyList()
+                    }
+                },
+                label = { Text("Endereço") },
+                placeholder = { Text("Digite seu endereço") },
+                leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(8.dp),
+                colors = outlinedTextFieldColors()
+            )
+
+            if (exibirSugestoes && sugestoes.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(horizontal = 4.dp)
+                ) {
+                    items(sugestoes) { prediction ->
+                        Text(
+                            text = prediction.getFullText(null).toString(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    endereco = prediction.getFullText(null).toString()
+                                    exibirSugestoes = false
+                                    sugestoes = emptyList()
+                                }
+                                .padding(12.dp)
+                        )
+                    }
+                }
+            }
+        }
 
         Spacer(Modifier.height(16.dp))
 
-        // CAMPO NECESSIDADE ESPECIAL (Dropdown)
+        // NECESSIDADE ESPECIAL
         var expanded by remember { mutableStateOf(false) }
         val opcoes = listOf("Nenhuma", "Idoso", "PcD", "Gestante")
 
@@ -163,7 +219,10 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                 shape = RoundedCornerShape(8.dp),
                 colors = outlinedTextFieldColors()
             )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 opcoes.forEach { opcao ->
                     DropdownMenuItem(
                         text = { Text(opcao) },
@@ -178,7 +237,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
 
         Spacer(Modifier.height(16.dp))
 
-        // CAMPO CPF
+        // CPF
         OutlinedTextField(
             value = cpf,
             onValueChange = {
@@ -204,15 +263,19 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                         colors = listOf(Color(0xFF00B14F), Color(0xFF007E32))
                     )
                 )
-                .clickable { /* ação finalizar */ },
+                .clickable(enabled = !loading) { completarPerfil() },
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Finalizar",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+            if (loading) {
+                CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
+            } else {
+                Text(
+                    text = "Finalizar",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
         }
     }
 }

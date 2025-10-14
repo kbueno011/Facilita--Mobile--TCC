@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,7 +30,6 @@ import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
 import com.exemple.facilita.model.RecuperarSenhaRequest
 import com.exemple.facilita.service.RetrofitFactory
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,6 +45,7 @@ fun TelaLogin(navController: NavController) {
     var selectedTab by remember { mutableStateOf(0) }
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
+    var senhaVisivel by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Box(
@@ -54,7 +57,6 @@ fun TelaLogin(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             // --- Logo e imagens ---
             Box(
                 modifier = Modifier
@@ -81,7 +83,7 @@ fun TelaLogin(navController: NavController) {
                 )
                 Image(
                     painter = painterResource(R.drawable.icongeladeiralogin),
-                    contentDescription = "Icone da geladeira",
+                    contentDescription = "Ícone da geladeira",
                     modifier = Modifier
                         .height(350.dp)
                         .width(300.dp)
@@ -139,14 +141,25 @@ fun TelaLogin(navController: NavController) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Campo Senha
+                    // Campo Senha com visibilidade
                     OutlinedTextField(
                         value = senha,
                         onValueChange = { senha = it },
                         label = { Text("Senha") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        placeholder = { Text("Digite sua senha") },
+                        visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                        },
+                        trailingIcon = {
+                            val image = if (senhaVisivel)
+                                Icons.Filled.VisibilityOff
+                            else
+                                Icons.Filled.Visibility
+
+                            IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
+                                Icon(imageVector = image, contentDescription = "Mostrar/Ocultar senha")
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -177,16 +190,14 @@ fun TelaLogin(navController: NavController) {
                                             facilitaApi.loginUser(login).await()
 
                                         withContext(Dispatchers.Main) {
-                                            // Login bem-sucedido
-                                            tentativaSenhaErrada = 0 // reseta contador
+                                            tentativaSenhaErrada = 0
                                             val token = response.token
                                             val usuario = response.usuario
-
                                             navController.navigate("tela_tipo_conta")
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {
-                                            tentativaSenhaErrada++ // incrementa erro
+                                            tentativaSenhaErrada++
                                             errorMessage = "Email ou senha incorretos"
                                         }
                                     }
@@ -222,7 +233,7 @@ fun TelaLogin(navController: NavController) {
                         }
                     }
 
-                    // --- Link Recuperar Senha (aparece após 2 erros) ---
+                    // --- Link Recuperar Senha ---
                     if (tentativaSenhaErrada >= 2) {
                         Text(
                             text = "Esqueceu a senha?",
@@ -237,9 +248,7 @@ fun TelaLogin(navController: NavController) {
                                             val response = facilitaApi.recuperarSenha(request).await()
 
                                             withContext(Dispatchers.Main) {
-                                                // Mostra a mensagem da API
                                                 errorMessage = response.message
-                                                // Vai pra tela de recuperação
                                                 navController.navigate("tela_recuperar_senha")
                                             }
                                         } catch (e: Exception) {
@@ -252,10 +261,9 @@ fun TelaLogin(navController: NavController) {
                         )
                     }
 
-
                     Spacer(modifier = Modifier.height(16.dp))
 
-
+                    // --- Link Cadastro ---
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()

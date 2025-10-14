@@ -1,6 +1,7 @@
 package com.exemple.facilita.service
 
 import com.exemple.facilita.model.CompletarPerfilRequest
+import com.exemple.facilita.model.CompletarPerfilResponse
 import com.exemple.facilita.model.LocalizacaoRequest
 import com.exemple.facilita.model.LocalizacaoResponse
 import com.exemple.facilita.model.Login
@@ -48,7 +49,7 @@ interface UserService {
 
     @Headers("Content-Type: application/json")
     @POST("v1/facilita/localizacao")
-    fun cadastrarContratante(@Body request: CompletarPerfilRequest): Call<LocalizacaoResponse>
+    fun cadastrarContratante(@Body request: CompletarPerfilRequest): Call<CompletarPerfilResponse>
 
     @Headers("Content-Type: application/json")
     @POST("v1/facilita/usuario/redefinir-senha")

@@ -116,7 +116,7 @@ fun TelaHome(navController: NavController) {
                                 pressedCard = true
                                 try {
                                     awaitRelease()
-                                    navController.navigate("tela_montar_servico")
+                                    navController.navigate("tela_endereco")
                                 } finally {
                                     pressedCard = false
                                 }
@@ -155,7 +155,7 @@ fun TelaHome(navController: NavController) {
                             )
 
                             Button(
-                                onClick = { navController.navigate("montarPedido") },
+                                onClick = { navController.navigate("tela_endereco") },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFFFFF)),
                                 shape = RoundedCornerShape(50),
                                 modifier = Modifier.height(36.dp)

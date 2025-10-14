@@ -8,17 +8,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -33,15 +30,15 @@ import com.exemple.facilita.service.RetrofitFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.await
 import androidx.compose.foundation.layout.FlowRow
+import retrofit2.await
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TelaCadastro(navController: NavController) {
-
     val facilitaApi = remember { RetrofitFactory().getUserService() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Estados dos campos
     var nome by remember { mutableStateOf("") }
@@ -73,6 +70,7 @@ fun TelaCadastro(navController: NavController) {
         isTelefoneError = telefone.length < 10 || !telefone.matches(Regex("^[0-9()\\-\\s+]+$"))
         isSenhaError = !(hasUppercase && hasLowercase && hasDigit && hasSpecial && hasMinLength)
         isConfirmarSenhaError = senha != confirmarSenha || confirmarSenha.isEmpty()
+
         return !isNomeError && !isEmailError && !isConfirmarEmailError &&
                 !isTelefoneError && !isSenhaError && !isConfirmarSenhaError
     }
@@ -138,48 +136,36 @@ fun TelaCadastro(navController: NavController) {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
+                    // Campo Nome
                     OutlinedTextField(
                         value = nome,
-                        onValueChange = {
-                            nome = it
-                            isNomeError = false
-                        },
+                        onValueChange = { nome = it; isNomeError = false },
                         label = { Text("Nome Completo") },
                         placeholder = { Text("Seu Nome Completo") },
                         leadingIcon = { Icon(Icons.Default.Person, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isNomeError,
-                        supportingText = {
-                            if (isNomeError) Text("Nome é obrigatório")
-                        }
+                        supportingText = { if (isNomeError) Text("Nome é obrigatório") }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = email,
-                        onValueChange = {
-                            email = it
-                            isEmailError = false
-                        },
+                        onValueChange = { email = it; isEmailError = false },
                         label = { Text("E-mail") },
                         placeholder = { Text("seuemail@gmail.com") },
                         leadingIcon = { Icon(Icons.Default.Email, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isEmailError,
-                        supportingText = {
-                            if (isEmailError) Text("Email inválido")
-                        }
+                        supportingText = { if (isEmailError) Text("Email inválido") }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = confirmarEmail,
-                        onValueChange = {
-                            confirmarEmail = it
-                            isConfirmarEmailError = false
-                        },
+                        onValueChange = { confirmarEmail = it; isConfirmarEmailError = false },
                         label = { Text("Confirmar e-mail") },
                         placeholder = { Text("seuemail@gmail.com") },
                         leadingIcon = { Icon(Icons.Default.Email, null) },
@@ -194,29 +180,20 @@ fun TelaCadastro(navController: NavController) {
 
                     OutlinedTextField(
                         value = telefone,
-                        onValueChange = {
-                            telefone = it
-                            isTelefoneError = false
-                        },
+                        onValueChange = { telefone = it; isTelefoneError = false },
                         label = { Text("Telefone") },
                         placeholder = { Text("(55)1191234-5678") },
                         leadingIcon = { Icon(Icons.Default.Phone, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isTelefoneError,
-                        supportingText = {
-                            if (isTelefoneError) Text("Telefone inválido")
-                        }
+                        supportingText = { if (isTelefoneError) Text("Telefone inválido") }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Campo de senha
                     OutlinedTextField(
                         value = senha,
-                        onValueChange = {
-                            senha = it
-                            isSenhaError = false
-                        },
+                        onValueChange = { senha = it; isSenhaError = false },
                         label = { Text("Senha") },
                         placeholder = { Text("Crie uma senha") },
                         leadingIcon = { Icon(Icons.Default.Lock, null) },
@@ -225,7 +202,6 @@ fun TelaCadastro(navController: NavController) {
                         isError = isSenhaError
                     )
 
-                    // ✅ Regras lado a lado (compactas)
                     FlowRow(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -237,17 +213,14 @@ fun TelaCadastro(navController: NavController) {
                         PasswordRequirement("Minúscula", hasLowercase)
                         PasswordRequirement("Número", hasDigit)
                         PasswordRequirement("Especial", hasSpecial)
-                        PasswordRequirement("Minimo de 6 caracteres", hasMinLength)
+                        PasswordRequirement("Mínimo 6 caracteres", hasMinLength)
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = confirmarSenha,
-                        onValueChange = {
-                            confirmarSenha = it
-                            isConfirmarSenhaError = false
-                        },
+                        onValueChange = { confirmarSenha = it; isConfirmarSenhaError = false },
                         label = { Text("Confirmar Senha") },
                         placeholder = { Text("Confirme sua senha") },
                         leadingIcon = { Icon(Icons.Default.Lock, null) },
@@ -346,23 +319,10 @@ fun PasswordRequirement(text: String, isMet: Boolean) {
         targetValue = if (isMet) Color(0xFF06C755) else Color.Gray,
         label = "passwordColor"
     )
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 2.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(16.dp)
-        )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Check, null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = text,
-            color = color,
-            fontSize = 12.sp
-        )
+        Text(text, color = color, fontSize = 12.sp)
     }
 }
 
@@ -370,5 +330,5 @@ fun PasswordRequirement(text: String, isMet: Boolean) {
 @Composable
 fun TelaCadastroPreview() {
     val navController = rememberNavController()
-    TelaCadastro(navController = navController)
+    TelaCadastro(navController)
 }

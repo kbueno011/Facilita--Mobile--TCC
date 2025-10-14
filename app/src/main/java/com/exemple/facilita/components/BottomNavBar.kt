@@ -1,6 +1,7 @@
 package com.exemple.facilita.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,7 +22,7 @@ import com.exemple.facilita.model.BottomNavItem
 fun BottomNavBar(navController: NavController) {
     val items = listOf(
         BottomNavItem("Home", Icons.Default.Home, "tela_home"),
-        BottomNavItem("Buscar", Icons.Default.Search, "tela_buscar"),
+        BottomNavItem("Buscar", Icons.Default.Search, "tela_buscar_categoria"),
         BottomNavItem("Pedidos", Icons.Default.List, "tela_historico_pedido"),
         BottomNavItem("Carteira", Icons.Default.AccountBalanceWallet, "tela_carteira"),
         BottomNavItem("Perfil", Icons.Default.Person, "tela_perfil")
@@ -30,18 +31,25 @@ fun BottomNavBar(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 20.dp), // flutua e não encosta nas bordas
+            .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(70.dp)
+                // sombra para flutuar
                 .shadow(
                     elevation = 10.dp,
                     shape = RoundedCornerShape(30.dp),
                     ambientColor = Color.Black.copy(alpha = 0.2f),
                     spotColor = Color.Black.copy(alpha = 0.2f)
+                )
+                // borda sutil em volta
+                .border(
+                    width = 1.2.dp,
+                    color = Color(0x22000000), // leve cinza transparente para parecer flutuante
+                    shape = RoundedCornerShape(30.dp)
                 ),
             color = Color.White,
             shape = RoundedCornerShape(30.dp)

@@ -41,22 +41,14 @@ import com.google.android.libraries.places.api.model.AddressComponent
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.Autocomplete
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import java.util.Locale
-import android.location.Address as AndroidAddress
+import kotlinx.coroutines.flow.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.util.*
 
-// ---------- Helpers ----------
 private fun comp(comps: List<AddressComponent>, vararg keys: String): String {
     val set = keys.toSet()
     return comps.firstOrNull { c -> c.types.any { it in set } }?.name.orEmpty()
@@ -64,32 +56,25 @@ private fun comp(comps: List<AddressComponent>, vararg keys: String): String {
 
 private fun shortLine(rua: String?, bairro: String?, cidade: String?, numero: String?): String {
     val partes = buildList {
-        rua?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
-        bairro?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
-        cidade?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
-        numero?.trim()?.takeIf { it.isNotEmpty() }?.let { add("Nº $it") }
+        rua?.takeIf { it.isNotBlank() }?.let { add(it) }
+        bairro?.takeIf { it.isNotBlank() }?.let { add(it) }
+        cidade?.takeIf { it.isNotBlank() }?.let { add(it) }
+        numero?.takeIf { it.isNotBlank() }?.let { add("Nº $it") }
     }
     return partes.joinToString(", ")
 }
 
-private suspend fun reverseGeocode(context: Context, lat: Double, lon: Double): AndroidAddress? =
+private suspend fun reverseGeocode(context: Context, lat: Double, lon: Double): android.location.Address? =
     withContext(Dispatchers.IO) {
         try {
             val geocoder = Geocoder(context, Locale("pt", "BR"))
             @Suppress("DEPRECATION")
-            val list = geocoder.getFromLocation(lat, lon, 1)
-            if (!list.isNullOrEmpty()) list[0] else null
+            geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()
         } catch (_: Exception) {
             null
         }
     }
 
-private fun ruaFrom(addr: AndroidAddress): String = addr.thoroughfare ?: addr.featureName ?: ""
-private fun numeroFrom(addr: AndroidAddress): String = addr.subThoroughfare ?: ""
-private fun bairroFrom(addr: AndroidAddress): String = addr.subLocality ?: addr.subAdminArea ?: ""
-private fun cidadeFrom(addr: AndroidAddress): String = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: ""
-
-// ---------- Tela ----------
 @Composable
 fun TelaEnderecoContent(
     navController: NavHostController,
@@ -117,17 +102,17 @@ fun TelaEnderecoContent(
     LaunchedEffect(Unit) {
         snapshotFlow { cameraPositionState.isMoving }
             .debounce(300)
-            .filter { moving -> !moving }
+            .filter { !it }
             .map { cameraPositionState.position.target }
             .collectLatest { target ->
                 reverseJob?.cancel()
                 reverseJob = scope.launch {
                     val a = reverseGeocode(context, target.latitude, target.longitude)
                     if (a != null) {
-                        val rua = ruaFrom(a)
-                        val bairro = bairroFrom(a)
-                        val cidade = cidadeFrom(a)
-                        val numero = numeroFrom(a)
+                        val rua = a.thoroughfare ?: ""
+                        val bairro = a.subLocality ?: ""
+                        val cidade = a.locality ?: ""
+                        val numero = a.subThoroughfare ?: ""
                         val curto = shortLine(rua, bairro, cidade, numero)
                             .ifBlank { a.getAddressLine(0) ?: "" }
 
@@ -164,9 +149,7 @@ fun TelaEnderecoContent(
 
             place.latLng?.let { latLng ->
                 scope.launch {
-                    cameraPositionState.animate(
-                        update = CameraUpdateFactory.newLatLngZoom(latLng, 17f)
-                    )
+                    cameraPositionState.animate(update = CameraUpdateFactory.newLatLngZoom(latLng, 17f))
                 }
             }
         }
@@ -186,21 +169,22 @@ fun TelaEnderecoContent(
         autocompleteLauncher.launch(intent)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F9F7))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 90.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(350.dp) // Aumentei de 280dp para 350dp
-            ) {
+    // ---- Lista de endereços recentes (como no código antigo) ----
+    val recentes = listOf(
+        Triple("Rua Vitória, Cohab 2", "São Paulo - SP", "Usado há 2h"),
+        Triple("Rua Manaus, Cohab 2", "São Paulo - SP", "Usado ontem"),
+        Triple("Rua Belém, Cohab 2", "Osasco - SP", "Usado há 3 dias"),
+        Triple("Rua Paraná, Cohab 1", "Carapicuíba - SP", "Usado há 1 semana"),
+        Triple("Avenida Brasil, Centro", "Barueri - SP", "Usado há 2 semanas"),
+        Triple("Rua das Flores, Jardim Europa", "Cotia - SP", "Usado há 3 semanas"),
+        Triple("Rua do Bosque, Vila Verde", "Santana de Parnaíba - SP", "Usado há 1 mês"),
+        Triple("Rua Monte Alegre, Vila Nova", "Itapevi - SP", "Usado há 2 meses")
+    )
+
+    // ---- Layout ----
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF7F9F7))) {
+        Column(modifier = Modifier.fillMaxSize().padding(bottom = 90.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().height(350.dp)) {
                 GoogleMap(
                     modifier = Modifier
                         .matchParentSize()
@@ -210,19 +194,16 @@ fun TelaEnderecoContent(
                     uiSettings = MapUiSettings(zoomControlsEnabled = false)
                 )
 
-                // Campo de busca flutuante
                 OutlinedTextField(
                     value = campo,
                     onValueChange = {},
                     placeholder = { Text("Buscar endereço", color = Color(0xFF6A6A6A)) },
                     singleLine = true,
                     enabled = false,
-                    leadingIcon = {
-                        Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF5D9C68))
-                    },
+                    leadingIcon = { Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF5D9C68)) },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .offset(y = 40.dp) // Ajustei um pouco para se alinhar à nova altura
+                        .offset(y = 40.dp)
                         .fillMaxWidth(0.9f)
                         .shadow(8.dp, RoundedCornerShape(35.dp))
                         .background(Color.White, RoundedCornerShape(35.dp))
@@ -234,28 +215,12 @@ fun TelaEnderecoContent(
                 )
             }
 
-
             Text(
                 text = "Endereços Recentes",
                 color = Color(0xFF4E7B5E),
                 fontWeight = FontWeight.Bold,
                 fontSize = 17.sp,
                 modifier = Modifier.padding(start = 20.dp, top = 50.dp, bottom = 8.dp)
-            )
-
-            // Endereços recentes fictícios
-            val recentes = listOf(
-                Triple("Rua Vitória, Cohab 2", "São Paulo - SP", "Usado há 2h"),
-                Triple("Rua Manaus, Cohab 2", "São Paulo - SP", "Usado ontem"),
-                Triple("Rua Belém, Cohab 2", "Osasco - SP", "Usado há 3 dias"),
-                Triple("Rua Paraná, Cohab 1", "Carapicuíba - SP", "Usado há 1 semana"),
-                Triple("Avenida Brasil, Centro", "Barueri - SP", "Usado há 2 semanas"),
-                Triple("Rua das Flores, Jardim Europa", "Cotia - SP", "Usado há 3 semanas"),
-                Triple("Rua do Bosque, Vila Verde", "Santana de Parnaíba - SP", "Usado há 1 mês"),
-                Triple("Rua Monte Alegre, Vila Nova", "Itapevi - SP", "Usado há 2 meses"),
-                Triple("Avenida Paulista, Bela Vista", "São Paulo - SP", "Usado há 4 meses"),
-                Triple("Rua das Palmeiras, Jardim das Rosas", "Jandira - SP", "Usado há 6 meses"),
-                Triple("Rua do Comércio, Centro", "Pirapora do Bom Jesus - SP", "Usado há 7 meses"),
             )
 
             LazyVerticalGrid(
@@ -271,10 +236,7 @@ fun TelaEnderecoContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(110.dp)
-                            .clickable {
-                                campo = endereco
-                                openAutocomplete()
-                            },
+                            .clickable { campo = endereco },
                         shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(5.dp)
@@ -303,24 +265,14 @@ fun TelaEnderecoContent(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            Text(
-                                text = cidade,
-                                color = Color(0xFF6B6B6B),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = tempo,
-                                color = Color(0xFF9C9C9C),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Text(text = cidade, color = Color(0xFF6B6B6B), fontSize = 12.sp)
+                            Text(text = tempo, color = Color(0xFF9C9C9C), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
             }
         }
 
-        // Botão cadastrar (continua igual)
         Button(
             onClick = {
                 val service = RetrofitFactory().getUserService()
@@ -338,9 +290,10 @@ fun TelaEnderecoContent(
                     override fun onResponse(call: Call<LocalizacaoResponse>, response: Response<LocalizacaoResponse>) {
                         if (response.isSuccessful) {
                             Toast.makeText(context, "Endereço cadastrado com sucesso!", Toast.LENGTH_SHORT).show()
-                            navController.navigate("tela_montar_servico") {
-                                popUpTo("telaEndereco") { inclusive = true }
+                            navController.navigate("tela_montar_servico/${viewModel.endereco.value}") {
+                                popUpTo("tela_endereco") { inclusive = true }
                             }
+
                         } else {
                             Toast.makeText(context, "Erro ao cadastrar (${response.code()})", Toast.LENGTH_SHORT).show()
                         }

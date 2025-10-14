@@ -264,8 +264,6 @@ fun CardServico(
                 }
             }
 
-            // Imagem posicionada à direita (alinhamento configurável)
-            // 🔽 IMAGEM AGORA NO CANTO INFERIOR DIREITO
             Image(
                 painter = painterResource(id = imagem),
                 contentDescription = titulo,
