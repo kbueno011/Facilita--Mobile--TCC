@@ -1,31 +1,45 @@
 package com.exemple.facilita.screens
 
+import android.util.Patterns
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import com.exemple.facilita.R
 
 @Composable
@@ -36,12 +50,6 @@ fun TelaInformacoesPerfil(navController: NavController) {
     var mensagem by remember { mutableStateOf("") }
     var erro by remember { mutableStateOf(false) }
 
-    // ✅ Requisitos da senha
-    val hasUppercase = novoEmail.any { it.isUpperCase() }
-    val hasLowercase = novoEmail.any { it.isLowerCase() }
-    val hasDigit = novoEmail.any { it.isDigit() }
-    val hasMinLength = novoEmail.length >= 6
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -49,6 +57,7 @@ fun TelaInformacoesPerfil(navController: NavController) {
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // 🔹 Barra superior
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -66,15 +75,14 @@ fun TelaInformacoesPerfil(navController: NavController) {
                 text = "Informações do Perfil",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                modifier = Modifier.fillMaxWidth()
-                    .padding(start = 60.dp)
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
         }
 
-
         Spacer(modifier = Modifier.height(20.dp))
 
-
+        // 🔹 Foto de perfil
         Box(contentAlignment = Alignment.BottomEnd) {
             Image(
                 painter = painterResource(id = R.drawable.foto_perfil),
@@ -108,13 +116,13 @@ fun TelaInformacoesPerfil(navController: NavController) {
 
         Spacer(modifier = Modifier.height(60.dp))
 
-        // 🔹 Campos de email
+        // 🔹 Campo: Email atual
         OutlinedTextField(
             value = emailAtual,
             onValueChange = { emailAtual = it },
             placeholder = { Text("Digite o email atual") },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = VisualTransformation.None,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF019D31),
                 unfocusedBorderColor = Color.LightGray
@@ -123,12 +131,13 @@ fun TelaInformacoesPerfil(navController: NavController) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // 🔹 Campo: Novo email
         OutlinedTextField(
             value = novoEmail,
             onValueChange = { novoEmail = it },
-            placeholder = { Text("Nova email") },
+            placeholder = { Text("Novo email") },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = VisualTransformation.None,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF019D31),
                 unfocusedBorderColor = Color.LightGray
@@ -137,12 +146,13 @@ fun TelaInformacoesPerfil(navController: NavController) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // 🔹 Campo: Confirmar email
         OutlinedTextField(
             value = confirmarEmail,
             onValueChange = { confirmarEmail = it },
             placeholder = { Text("Confirmar novo email") },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = VisualTransformation.None,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF019D31),
                 unfocusedBorderColor = Color.LightGray
@@ -161,11 +171,9 @@ fun TelaInformacoesPerfil(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Start
             )
-
-
         }
 
-        Spacer(modifier = Modifier.height(200.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
         // 🔹 Botão salvar
         Box(
@@ -179,15 +187,19 @@ fun TelaInformacoesPerfil(navController: NavController) {
                     )
                 )
                 .clickable {
-                    if (novoEmail != confirmarEmail) {
-                        erro = true
-                        mensagem = "Os emails não coincidem."
-                    } else if (!hasUppercase || !hasLowercase || !hasDigit || !hasMinLength) {
-                        erro = true
-                        mensagem = "O email não atende aos requisitos."
-                    } else {
-                        erro = false
-                        mensagem = "Email alterado com sucesso!"
+                    when {
+                        novoEmail != confirmarEmail -> {
+                            erro = true
+                            mensagem = "Os emails não coincidem."
+                        }
+                        !Patterns.EMAIL_ADDRESS.matcher(novoEmail).matches() -> {
+                            erro = true
+                            mensagem = "Formato de email inválido."
+                        }
+                        else -> {
+                            erro = false
+                            mensagem = "Email alterado com sucesso!"
+                        }
                     }
                 },
             contentAlignment = Alignment.Center
@@ -201,9 +213,4 @@ fun TelaInformacoesPerfil(navController: NavController) {
         }
     }
 }
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun TelaInformacoesPerfilPreview() {
-    val navController = rememberNavController()
-    TelaInformacoesPerfil(navController)
-}
+

@@ -1,5 +1,6 @@
 package com.exemple.facilita.screens
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,6 +42,11 @@ import retrofit2.Response
 @Composable
 fun TelaCompletarPerfilContratante(navController: NavController) {
     val context = LocalContext.current
+
+    // 🔹 Recupera o nome do usuário logado (salvo no login)
+    val nomeUsuario by remember {
+        mutableStateOf(getNomeUsuario(context))
+    }
 
     // Inicializa o Google Places API
     LaunchedEffect(Unit) {
@@ -100,6 +106,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
         })
     }
 
+    // UI
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,8 +126,9 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
 
         Spacer(Modifier.height(12.dp))
 
+        // 🔹 Nome do usuário logado
         Text(
-            text = "Luiz da Silva",
+            text = nomeUsuario.ifEmpty { "Usuário" },
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1C1C1E)
@@ -137,7 +145,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
 
         Spacer(Modifier.height(24.dp))
 
-        // ENDEREÇO com autocomplete igual ao da tela de cadastro
+        // ENDEREÇO com autocomplete
         Box {
             OutlinedTextField(
                 value = endereco,
@@ -197,7 +205,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
 
         Spacer(Modifier.height(16.dp))
 
-        // NECESSIDADE ESPECIAL
+        // NECESSIDADE
         var expanded by remember { mutableStateOf(false) }
         val opcoes = listOf("Nenhuma", "Idoso", "PcD", "Gestante")
 
@@ -210,9 +218,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Necessidades Especiais") },
-                trailingIcon = {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
                 modifier = Modifier
                     .menuAnchor()
                     .fillMaxWidth(),
@@ -260,7 +266,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                 .clip(RoundedCornerShape(50))
                 .background(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(Color(0xFF00B14F), Color(0xFF007E32))
+                        listOf(Color(0xFF00B14F), Color(0xFF007E32))
                     )
                 )
                 .clickable(enabled = !loading) { completarPerfil() },
@@ -280,6 +286,13 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
     }
 }
 
+// 🔹 Função auxiliar: lê o nome salvo no login
+fun getNomeUsuario(context: Context): String {
+    val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+    return sharedPref.getString("nomeUsuario", "") ?: ""
+}
+
+// 🔹 Estilo dos campos
 @Composable
 fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Color(0xFFD1D5DB),

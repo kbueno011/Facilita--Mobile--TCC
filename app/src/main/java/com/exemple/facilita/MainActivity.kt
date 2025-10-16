@@ -41,7 +41,7 @@ fun AppNavHost(navController: NavHostController) {
         navController = navController,
         startDestination = "tela_home"
     ) {
-        composable("tela_home") {
+        composable("splash") {
             SplashScreen(navController)
         }
         composable("tela_inicio1") {
@@ -101,7 +101,7 @@ fun AppNavHost(navController: NavHostController) {
             TelaStatusPagamento(navController)
         }
         composable("tela_historico_pedido") {
-            TelaPedidos(navController)
+            TelaPedidosHistorico(navController)
         }
         composable("tela_pedido_confirmado") {
             TelaPedidoConfirmado(navController)
