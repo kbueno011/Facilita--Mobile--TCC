@@ -1,5 +1,6 @@
 package com.exemple.facilita.screens
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -38,10 +40,10 @@ import retrofit2.await
 @Composable
 fun TelaLogin(navController: NavController) {
     val facilitaApi = remember { RetrofitFactory().getUserService() }
-
     val coroutineScope = rememberCoroutineScope()
-    var tentativaSenhaErrada by remember { mutableStateOf(0) }
+    val context = LocalContext.current
 
+    var tentativaSenhaErrada by remember { mutableStateOf(0) }
     var selectedTab by remember { mutableStateOf(0) }
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
@@ -62,7 +64,7 @@ fun TelaLogin(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(3f)
-                    .background(Color(0xFF444444)),
+                    .background(Color(0xFF444444))
             ) {
                 Image(
                     painter = painterResource(R.drawable.logotcc),
@@ -186,13 +188,15 @@ fun TelaLogin(navController: NavController) {
                                             senha = senha
                                         )
 
-                                        val response: LoginResponse =
-                                            facilitaApi.loginUser(login).await()
+                                        val response: LoginResponse = facilitaApi.loginUser(login).await()
 
                                         withContext(Dispatchers.Main) {
                                             tentativaSenhaErrada = 0
+
+                                            // ✅ Salva o token localmente
                                             val token = response.token
-                                            val usuario = response.usuario
+                                            salvarToken(context, token)
+
                                             navController.navigate("tela_home")
                                         }
                                     } catch (e: Exception) {
@@ -283,6 +287,17 @@ fun TelaLogin(navController: NavController) {
             }
         }
     }
+}
+
+// ✅ Funções utilitárias para salvar e recuperar o token
+fun salvarToken(context: Context, token: String) {
+    val sharedPreferences = context.getSharedPreferences("FacilitaPrefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit().putString("token", token).apply()
+}
+
+fun obterToken(context: Context): String? {
+    val sharedPreferences = context.getSharedPreferences("FacilitaPrefs", Context.MODE_PRIVATE)
+    return sharedPreferences.getString("token", null)
 }
 
 @Composable
