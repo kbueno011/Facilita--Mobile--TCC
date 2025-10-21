@@ -10,12 +10,15 @@ import com.exemple.facilita.model.RecuperarSenhaRequest
 import com.exemple.facilita.model.RecuperarSenhaResponse
 import com.exemple.facilita.model.RecuperarSenhaTelefoneRequest
 import com.exemple.facilita.model.Register
+import com.exemple.facilita.model.RegisterResponse
 import com.exemple.facilita.model.TrocarSenhaRequest
 import com.exemple.facilita.model.TrocarSenhaResponse
 import com.exemple.facilita.model.VerificarCodigoRequest
 import com.exemple.facilita.model.VerificarSenhaResponse
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
 
@@ -24,7 +27,8 @@ interface UserService {
 
     @Headers("Content-Type: application/json")
     @POST("v1/facilita/usuario/register")
-    fun saveUser(@Body user: Register): Call<Register>
+    fun saveUser(@Body user: Register): Call<RegisterResponse>
+
 
     @Headers("Content-Type: application/json")
     @POST("v1/facilita/usuario/login")
@@ -47,9 +51,11 @@ interface UserService {
     @POST("v1/facilita/localizacao")
     fun criarLocalizacao(@Body request: LocalizacaoRequest): Call<LocalizacaoResponse>
 
-    @Headers("Content-Type: application/json")
-    @POST("v1/facilita/localizacao")
-    fun cadastrarContratante(@Body request: CompletarPerfilRequest): Call<CompletarPerfilResponse>
+    @POST("v1/facilita/contratante/register")
+    fun cadastrarContratante(
+        @Header("Authorization") authToken: String, // <- aqui
+        @Body request: CompletarPerfilRequest
+    ): Call<CompletarPerfilResponse>
 
     @Headers("Content-Type: application/json")
     @POST("v1/facilita/usuario/redefinir-senha")

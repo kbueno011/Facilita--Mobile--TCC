@@ -1,6 +1,8 @@
 package com.exemple.facilita.screens
 
+import android.content.Context
 import android.util.Patterns
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.R
 import com.exemple.facilita.model.Register
+import com.exemple.facilita.model.RegisterResponse
 import com.exemple.facilita.service.RetrofitFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,16 +59,13 @@ fun TelaCadastro(navController: NavController) {
     var isSenhaError by remember { mutableStateOf(false) }
     var isConfirmarSenhaError by remember { mutableStateOf(false) }
 
-    // CheckBox dos Termos
     var aceitouTermos by remember { mutableStateOf(false) }
 
     // Recebe estado vindo da TelaTermos
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     LaunchedEffect(navBackStackEntry.value) {
         val result = navBackStackEntry.value?.savedStateHandle?.get<Boolean>("aceitouTermos")
-        if (result == true) {
-            aceitouTermos = true
-        }
+        if (result == true) aceitouTermos = true
     }
 
     // Requisitos de senha
@@ -73,18 +73,27 @@ fun TelaCadastro(navController: NavController) {
     val hasLowercase = senha.any { it.isLowerCase() }
     val hasDigit = senha.any { it.isDigit() }
     val hasSpecial = senha.any { !it.isLetterOrDigit() }
-    val hasMinLength = senha.length >= 6
+    val hasMinLength = senha.length >= 8
 
     fun validar(): Boolean {
-        isNomeError = nome.isBlank()
+        isNomeError = nome.isBlank() || nome.length < 2
         isEmailError = !Patterns.EMAIL_ADDRESS.matcher(email).matches()
         isConfirmarEmailError = email != confirmarEmail || confirmarEmail.isEmpty()
-        isTelefoneError = telefone.length < 10 || !telefone.matches(Regex("^[0-9()\\-\\s+]+$"))
+        isTelefoneError = telefone.length < 10 || !telefone.matches(Regex("^[0-9]+$"))
         isSenhaError = !(hasUppercase && hasLowercase && hasDigit && hasSpecial && hasMinLength)
         isConfirmarSenhaError = senha != confirmarSenha || confirmarSenha.isEmpty()
 
         return !isNomeError && !isEmailError && !isConfirmarEmailError &&
                 !isTelefoneError && !isSenhaError && !isConfirmarSenhaError && aceitouTermos
+    }
+
+    // Função para salvar token no SharedPreferences
+    fun saveAuthToken(context: Context, token: String) {
+        val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            putString("auth_token", token)
+            apply()
+        }
     }
 
     Box(
@@ -96,8 +105,7 @@ fun TelaCadastro(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // Logo
+            // Logo (mantida igual)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,7 +155,7 @@ fun TelaCadastro(navController: NavController) {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // Campos
+                    // Campos (igual ao anterior, sem alterações)
                     OutlinedTextField(
                         value = nome,
                         onValueChange = { nome = it; isNomeError = false },
@@ -155,7 +163,7 @@ fun TelaCadastro(navController: NavController) {
                         leadingIcon = { Icon(Icons.Default.Person, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isNomeError,
-                        supportingText = { if (isNomeError) Text("Nome é obrigatório") }
+                        supportingText = { if (isNomeError) Text("Nome inválido") }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -186,8 +194,8 @@ fun TelaCadastro(navController: NavController) {
 
                     OutlinedTextField(
                         value = telefone,
-                        onValueChange = { telefone = it; isTelefoneError = false },
-                        label = { Text("Telefone") },
+                        onValueChange = { telefone = it.filter { c -> c.isDigit() }; isTelefoneError = false },
+                        label = { Text("Telefone (somente números)") },
                         leadingIcon = { Icon(Icons.Default.Phone, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isTelefoneError,
@@ -217,7 +225,7 @@ fun TelaCadastro(navController: NavController) {
                         PasswordRequirement("Minúscula", hasLowercase)
                         PasswordRequirement("Número", hasDigit)
                         PasswordRequirement("Especial", hasSpecial)
-                        PasswordRequirement("Mínimo 6 caracteres", hasMinLength)
+                        PasswordRequirement("Mínimo 8 caracteres", hasMinLength)
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -265,23 +273,54 @@ fun TelaCadastro(navController: NavController) {
                                     nome = nome,
                                     email = email,
                                     telefone = telefone,
-                                    senha_hash = senha
+                                    senha_hash = senha,
+                                    foto_perfil = "foto.jpeg"
                                 )
 
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
-                                        val response = facilitaApi.saveUser(cadastro).await()
-                                        withContext(Dispatchers.Main) {
-                                            navController.navigate("tela_login")
+                                        println("🟦 [DEBUG] Iniciando cadastro...")
+
+                                        // Mostra o JSON que vai ser enviado
+                                        println("📤 [ENVIANDO] ${cadastro}")
+
+                                        val response = facilitaApi.saveUser(cadastro).execute() // troca .await() por .execute() p/ capturar melhor os erros
+
+                                        println("🟨 [DEBUG] Código HTTP: ${response.code()}")
+
+                                        if (response.isSuccessful) {
+                                            val body = response.body()
+                                            println("✅ [SUCESSO] Resposta: $body")
+
+                                            withContext(Dispatchers.Main) {
+                                                if (body != null) {
+                                                    saveAuthToken(context, body.token)
+                                                    Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
+
+                                                    if (body.proximo_passo == "escolher_tipo_conta") {
+                                                        navController.navigate("tela_tipo_conta")
+                                                    } else {
+                                                        navController.navigate("tela_home")
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            val errorBody = response.errorBody()?.string()
+                                            println("❌ [ERRO API] Código: ${response.code()} - Erro: $errorBody")
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Erro ${response.code()}: $errorBody", Toast.LENGTH_LONG).show()
+                                            }
                                         }
+
                                     } catch (e: Exception) {
+                                        println("🔥 [EXCEPTION] ${e.localizedMessage}")
                                         withContext(Dispatchers.Main) {
-                                            println("Erro ao cadastrar: ${e.message}")
+                                            Toast.makeText(context, "Erro inesperado: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 }
                             } else {
-                                println("Dados inválidos ou termos não aceitos")
+                                println("⚠️ [VALIDAÇÃO] Dados inválidos ou termos não aceitos")
                             }
                         },
                         modifier = Modifier
@@ -310,6 +349,7 @@ fun TelaCadastro(navController: NavController) {
                             )
                         }
                     }
+
 
                     Spacer(modifier = Modifier.height(8.dp))
 

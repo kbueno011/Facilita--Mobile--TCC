@@ -193,7 +193,7 @@ fun TelaLogin(navController: NavController) {
                                             tentativaSenhaErrada = 0
                                             val token = response.token
                                             val usuario = response.usuario
-                                            navController.navigate("tela_tipo_conta")
+                                            navController.navigate("tela_home")
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {

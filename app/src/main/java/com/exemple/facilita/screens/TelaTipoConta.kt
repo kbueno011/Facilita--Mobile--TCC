@@ -36,13 +36,8 @@ fun TelaTipoConta(navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
-            shape = RoundedCornerShape(
-                bottomEnd = 24.dp,
-                bottomStart = 24.dp
-            ),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF019D31)
-            )
+            shape = RoundedCornerShape(bottomEnd = 24.dp, bottomStart = 24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF019D31))
         ) {
             Column(
                 modifier = Modifier
@@ -155,18 +150,14 @@ fun TelaTipoConta(navController: NavController) {
                 .padding(horizontal = 24.dp)
                 .height(56.dp),
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent
-            ),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
             contentPadding = PaddingValues()
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        brush = Brush.horizontalGradient(
-                            listOf(Color(0xFF019D31), Color(0xFF06C755))
-                        ),
+                        brush = Brush.horizontalGradient(listOf(Color(0xFF019D31), Color(0xFF06C755))),
                         shape = RoundedCornerShape(50)
                     ),
                 contentAlignment = Alignment.Center
