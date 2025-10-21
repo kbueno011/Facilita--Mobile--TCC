@@ -3,53 +3,65 @@ package com.exemple.facilita.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun TelaTermos(navController: NavController) {
     val scrollState = rememberScrollState()
-    val accepted = remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF444444))
-            .padding(16.dp)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color(0xFF222222), Color(0xFF111111))
+                )
+            )
+            .padding(24.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White, shape = MaterialTheme.shapes.medium)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(scrollState)
+                    .fillMaxSize()
+                    .padding(24.dp)
             ) {
+                // Título
                 Text(
                     text = "Termos de Uso",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF019D31),
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .align(Alignment.CenterHorizontally)
                 )
 
-                Text(
-                    text = """
+                // Texto rolável
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(scrollState)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = """
 O presente documento tem por finalidade estabelecer os Termos de Uso do aplicativo Facilita, desenvolvido como parte de uma solução tecnológica destinada a intermediar a solicitação e a execução de serviços de compras, entregas e demais tarefas cotidianas. 
 
 Ao realizar o cadastro e utilizar a plataforma, o usuário declara estar ciente e de acordo com todas as condições aqui descritas, reconhecendo que a utilização do sistema implica na aceitação integral dos presentes termos.
@@ -62,44 +74,50 @@ Para maior transparência e segurança, a plataforma disponibiliza ferramentas c
 
 Os pagamentos realizados pelo contratante ocorrem unicamente por meio da carteira digital interna do aplicativo, na qual o usuário poderá adicionar saldo previamente. O valor correspondente ao serviço será debitado automaticamente após a confirmação da entrega, sendo repassado ao prestador conforme as regras estabelecidas pela plataforma.
 """.trimIndent(),
-                    fontSize = 14.sp,
-                    color = Color.DarkGray
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = {
-                        // recusar → volta para login ou fecha app
-                        navController.popBackStack()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                ) {
-                    Text("Recusar", color = Color.White)
+                        fontSize = 15.sp,
+                        color = Color(0xFF333333),
+                        lineHeight = 22.sp,
+                        textAlign = TextAlign.Justify
+                    )
                 }
 
-                Button(
-                    onClick = {
-                        // aceitar → continua fluxo (ex: cadastro ou home)
-                        navController.navigate("tela_tipo_conta")
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF019D31))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Botões de ação
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Aceitar", color = Color.White)
+                    // Recusar
+                    Button(
+                        onClick = { navController.popBackStack() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF888888)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Recusar", color = Color.White, fontSize = 16.sp)
+                    }
+
+                    // Aceitar
+                    Button(
+                        onClick = {
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("termosAceitos", true)
+                            navController.popBackStack()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF019D31)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Aceitar", color = Color.White, fontSize = 16.sp)
+                    }
                 }
             }
         }
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun TelaTermosPreview() {
-    val navController = rememberNavController()
-    TelaTermos(navController = navController)
 }

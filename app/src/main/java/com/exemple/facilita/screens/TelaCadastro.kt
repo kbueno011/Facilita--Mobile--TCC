@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.R
 import com.exemple.facilita.model.Register
@@ -30,7 +32,6 @@ import com.exemple.facilita.service.RetrofitFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.foundation.layout.FlowRow
 import retrofit2.await
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -40,7 +41,7 @@ fun TelaCadastro(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Estados dos campos
+    // Campos e erros
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var confirmarEmail by remember { mutableStateOf("") }
@@ -48,7 +49,6 @@ fun TelaCadastro(navController: NavController) {
     var senha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
 
-    // Estados de erro
     var isNomeError by remember { mutableStateOf(false) }
     var isEmailError by remember { mutableStateOf(false) }
     var isConfirmarEmailError by remember { mutableStateOf(false) }
@@ -56,7 +56,19 @@ fun TelaCadastro(navController: NavController) {
     var isSenhaError by remember { mutableStateOf(false) }
     var isConfirmarSenhaError by remember { mutableStateOf(false) }
 
-    // Regras de senha
+    // CheckBox dos Termos
+    var aceitouTermos by remember { mutableStateOf(false) }
+
+    // Recebe estado vindo da TelaTermos
+    val navBackStackEntry = navController.currentBackStackEntryAsState()
+    LaunchedEffect(navBackStackEntry.value) {
+        val result = navBackStackEntry.value?.savedStateHandle?.get<Boolean>("aceitouTermos")
+        if (result == true) {
+            aceitouTermos = true
+        }
+    }
+
+    // Requisitos de senha
     val hasUppercase = senha.any { it.isUpperCase() }
     val hasLowercase = senha.any { it.isLowerCase() }
     val hasDigit = senha.any { it.isDigit() }
@@ -72,7 +84,7 @@ fun TelaCadastro(navController: NavController) {
         isConfirmarSenhaError = senha != confirmarSenha || confirmarSenha.isEmpty()
 
         return !isNomeError && !isEmailError && !isConfirmarEmailError &&
-                !isTelefoneError && !isSenhaError && !isConfirmarSenhaError
+                !isTelefoneError && !isSenhaError && !isConfirmarSenhaError && aceitouTermos
     }
 
     Box(
@@ -85,7 +97,7 @@ fun TelaCadastro(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Topo com logo
+            // Logo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -101,7 +113,6 @@ fun TelaCadastro(navController: NavController) {
                         .width(170.dp)
                         .padding(top = 20.dp, start = 30.dp)
                 )
-
                 Image(
                     painter = painterResource(R.drawable.texturalateral),
                     contentDescription = "Textura lateral",
@@ -112,7 +123,7 @@ fun TelaCadastro(navController: NavController) {
                 )
             }
 
-            // Card branco
+            // Card de cadastro
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -136,12 +147,11 @@ fun TelaCadastro(navController: NavController) {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // Campo Nome
+                    // Campos
                     OutlinedTextField(
                         value = nome,
                         onValueChange = { nome = it; isNomeError = false },
                         label = { Text("Nome Completo") },
-                        placeholder = { Text("Seu Nome Completo") },
                         leadingIcon = { Icon(Icons.Default.Person, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isNomeError,
@@ -154,7 +164,6 @@ fun TelaCadastro(navController: NavController) {
                         value = email,
                         onValueChange = { email = it; isEmailError = false },
                         label = { Text("E-mail") },
-                        placeholder = { Text("seuemail@gmail.com") },
                         leadingIcon = { Icon(Icons.Default.Email, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isEmailError,
@@ -167,13 +176,10 @@ fun TelaCadastro(navController: NavController) {
                         value = confirmarEmail,
                         onValueChange = { confirmarEmail = it; isConfirmarEmailError = false },
                         label = { Text("Confirmar e-mail") },
-                        placeholder = { Text("seuemail@gmail.com") },
                         leadingIcon = { Icon(Icons.Default.Email, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isConfirmarEmailError,
-                        supportingText = {
-                            if (isConfirmarEmailError) Text("Emails não coincidem")
-                        }
+                        supportingText = { if (isConfirmarEmailError) Text("Emails não coincidem") }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -182,7 +188,6 @@ fun TelaCadastro(navController: NavController) {
                         value = telefone,
                         onValueChange = { telefone = it; isTelefoneError = false },
                         label = { Text("Telefone") },
-                        placeholder = { Text("(55)1191234-5678") },
                         leadingIcon = { Icon(Icons.Default.Phone, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isTelefoneError,
@@ -195,7 +200,6 @@ fun TelaCadastro(navController: NavController) {
                         value = senha,
                         onValueChange = { senha = it; isSenhaError = false },
                         label = { Text("Senha") },
-                        placeholder = { Text("Crie uma senha") },
                         leadingIcon = { Icon(Icons.Default.Lock, null) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
@@ -222,18 +226,38 @@ fun TelaCadastro(navController: NavController) {
                         value = confirmarSenha,
                         onValueChange = { confirmarSenha = it; isConfirmarSenhaError = false },
                         label = { Text("Confirmar Senha") },
-                        placeholder = { Text("Confirme sua senha") },
                         leadingIcon = { Icon(Icons.Default.Lock, null) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         isError = isConfirmarSenhaError,
-                        supportingText = {
-                            if (isConfirmarSenhaError) Text("Senhas não coincidem")
-                        }
+                        supportingText = { if (isConfirmarSenhaError) Text("Senhas não coincidem") }
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // CheckBox de Termos
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = aceitouTermos,
+                            onCheckedChange = { aceitouTermos = it }
+                        )
+                        Text(text = "Aceito os ")
+                        Text(
+                            text = "termos de uso",
+                            color = Color(0xFF019D31),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable {
+                                navController.navigate("tela_termos")
+                            }
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Botão Cadastrar
                     Button(
                         onClick = {
                             if (validar()) {
@@ -243,11 +267,12 @@ fun TelaCadastro(navController: NavController) {
                                     telefone = telefone,
                                     senha_hash = senha
                                 )
+
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
-                                        facilitaApi.saveUser(cadastro).await()
+                                        val response = facilitaApi.saveUser(cadastro).await()
                                         withContext(Dispatchers.Main) {
-                                            navController.navigate("tela_termos")
+                                            navController.navigate("tela_login")
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {
@@ -256,7 +281,7 @@ fun TelaCadastro(navController: NavController) {
                                     }
                                 }
                             } else {
-                                println("Os dados estão incorretos")
+                                println("Dados inválidos ou termos não aceitos")
                             }
                         },
                         modifier = Modifier
@@ -292,11 +317,7 @@ fun TelaCadastro(navController: NavController) {
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Já possui uma conta? ",
-                            fontSize = 14.sp,
-                            color = Color.Black
-                        )
+                        Text("Já possui uma conta? ", fontSize = 14.sp, color = Color.Black)
                         Text(
                             text = "Fazer login",
                             fontSize = 14.sp,
@@ -326,9 +347,8 @@ fun PasswordRequirement(text: String, isMet: Boolean) {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showSystemUi = true)
 @Composable
 fun TelaCadastroPreview() {
-    val navController = rememberNavController()
-    TelaCadastro(navController)
+    TelaCadastro(rememberNavController())
 }
