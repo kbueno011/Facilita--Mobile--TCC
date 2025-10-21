@@ -110,7 +110,9 @@ fun AppNavHost(navController: NavHostController) {
             TelaBuscarServico(navController)
         }
 
-
+        composable("tela_completar_perfil_prestador") {
+            TelaCompletarPerfilPrestador(navController)
+        }
 
     }
 }
