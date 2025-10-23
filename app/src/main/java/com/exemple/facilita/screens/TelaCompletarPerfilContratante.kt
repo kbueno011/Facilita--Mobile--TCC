@@ -147,7 +147,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
         })
     }
 
-    // --- Layout ---
+
     Column(
         modifier = Modifier
             .fillMaxSize()

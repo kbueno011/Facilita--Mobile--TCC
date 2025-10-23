@@ -1,21 +1,22 @@
 package com.exemple.facilita.screens
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +24,6 @@ import androidx.navigation.NavController
 import com.exemple.facilita.components.BottomNavBar
 import com.exemple.facilita.model.ServicoResponse
 import java.io.Serializable
-import kotlinx.coroutines.delay
 
 @Composable
 fun TelaStatusPagamento(navController: NavController) {
@@ -36,8 +36,11 @@ fun TelaStatusPagamento(navController: NavController) {
     }
 
     val scrollState = rememberScrollState()
-    val headerGradient = Brush.horizontalGradient(listOf(Color(0xFF06C755), Color(0xFF00A651)))
-    val valueGradient = Brush.verticalGradient(listOf(Color(0xFF00D97E), Color(0xFF019D31)))
+
+    // Gradientes fixos
+    val headerGradient = Brush.horizontalGradient(
+        listOf(Color(0xFF06C755), Color(0xFF00A651))
+    )
 
     Scaffold(
         bottomBar = { BottomNavBar(navController) },
@@ -50,7 +53,7 @@ fun TelaStatusPagamento(navController: NavController) {
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Cabeçalho futurista menor
+            // 🔹 Cabeçalho ajustado (menor)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -70,7 +73,7 @@ fun TelaStatusPagamento(navController: NavController) {
                         contentDescription = "Voltar",
                         tint = Color.White,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .clickable { navController.popBackStack() }
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -83,10 +86,10 @@ fun TelaStatusPagamento(navController: NavController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             servico?.let { s ->
-                // Card principal animado
+                // 🔹 Card principal animado
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInVertically(
@@ -100,15 +103,39 @@ fun TelaStatusPagamento(navController: NavController) {
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F5)),
-                        elevation = CardDefaults.cardElevation(12.dp)
+                        elevation = CardDefaults.cardElevation(10.dp)
                     ) {
                         Column(modifier = Modifier.padding(24.dp)) {
                             val valorTotal = s.detalhes_valor?.valor_total ?: s.valor ?: 0.0
+
+                            // 🔹 Efeito animado de gradiente em movimento
+                            val infiniteTransition = rememberInfiniteTransition(label = "")
+                            val animatedOffset by infiniteTransition.animateFloat(
+                                initialValue = 0f,
+                                targetValue = 1000f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(6000, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Restart
+                                ),
+                                label = ""
+                            )
+
+                            val animatedBrush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF00C853),
+                                    Color(0xFF00E676),
+                                    Color(0xFF00C853)
+                                ),
+                                start = Offset(animatedOffset, 0f),
+                                end = Offset(animatedOffset - 600f, 400f)
+                            )
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp)
-                                    .background(valueGradient, RoundedCornerShape(20.dp)),
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(animatedBrush),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -128,7 +155,6 @@ fun TelaStatusPagamento(navController: NavController) {
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // Linhas de informação animadas individualmente
                             LinhaInfoFuturistaAnimada("ID do Serviço", s.id?.toString() ?: "—", delay = 100)
                             LinhaInfoFuturistaAnimada("Status", s.status ?: "PENDENTE", delay = 200)
                             LinhaInfoFuturistaAnimada("Categoria", s.categoria?.nome ?: "Não informado", delay = 300)
@@ -138,52 +164,31 @@ fun TelaStatusPagamento(navController: NavController) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Botão Confirmar Valor fora do card
-                var botaoVisible by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    delay(600)
-                    botaoVisible = true
-                }
-
-                AnimatedVisibility(
-                    visible = botaoVisible,
-                    enter = slideInVertically(
-                        initialOffsetY = { it / 2 },
-                        animationSpec = tween(500)
-                    ) + fadeIn(animationSpec = tween(500))
+                // 🔹 Botão Confirmar Valor (fora do card e mais embaixo)
+                Spacer(modifier = Modifier.height(60.dp))
+                Button(
+                    onClick = {
+                        navController.navigate("tela_pedido_confirmado")
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF06C755),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(55.dp)
                 ) {
-                    Button(
-                        onClick = { navController.navigate("tela_confirmacao") },
-                        modifier = Modifier
-                            .fillMaxWidth(0.9f)
-                            .height(65.dp),
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(listOf(Color(0xFF00C755), Color(0xFF019D31))),
-                                    shape = RoundedCornerShape(50)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Confirmar Valor",
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    Text(
+                        "Confirmar Valor",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(60.dp))
             } ?: run {
+                // 🔹 Loading
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -203,7 +208,7 @@ fun LinhaInfoFuturistaAnimada(titulo: String, valor: String, delay: Int = 0) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(delay.toLong())
+        kotlinx.coroutines.delay(delay.toLong())
         visible = true
     }
 

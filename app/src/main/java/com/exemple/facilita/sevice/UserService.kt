@@ -1,6 +1,7 @@
 package com.exemple.facilita.service
 
 import com.exemple.facilita.model.*
+import com.exemple.facilita.screens.ApiResponse
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
@@ -61,6 +62,9 @@ interface UserService {
         @Header("Authorization") authToken: String,
         @Body request: ServicoRequest
     ): Response<ServicoResponse>
+
+    @GET("contratante/pedidos") // ajuste o endpoint se necessário
+    suspend fun getPedidos(@Header("Authorization") token: String): Response<ApiResponse>
 
 
 
