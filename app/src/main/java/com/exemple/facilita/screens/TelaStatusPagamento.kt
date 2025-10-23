@@ -1,203 +1,246 @@
 package com.exemple.facilita.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.components.BottomNavBar
+import com.exemple.facilita.model.ServicoResponse
+import java.io.Serializable
+import kotlinx.coroutines.delay
 
 @Composable
 fun TelaStatusPagamento(navController: NavController) {
+    val servico by remember {
+        mutableStateOf(
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<Serializable>("servicoData") as? ServicoResponse
+        )
+    }
+
+    val scrollState = rememberScrollState()
+    val headerGradient = Brush.horizontalGradient(listOf(Color(0xFF06C755), Color(0xFF00A651)))
+    val valueGradient = Brush.verticalGradient(listOf(Color(0xFF00D97E), Color(0xFF019D31)))
+
     Scaffold(
         bottomBar = { BottomNavBar(navController) },
-        ) { innerPadding ->
-
+        containerColor = Color(0xFFF5F5F7)
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFF4F4F4)),
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // Cabeçalho verde
+            // Cabeçalho futurista menor
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(90.dp)
                     .background(
-                        color = Color(0xFF00A651),
-                        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
-                    )
-                    .padding(vertical = 20.dp),
-                contentAlignment = Alignment.Center
+                        brush = headerGradient,
+                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                    ),
+                contentAlignment = Alignment.CenterStart
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                    modifier = Modifier.padding(horizontal = 20.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.KeyboardArrowLeft,
+                        imageVector = Icons.Filled.KeyboardArrowLeft,
                         contentDescription = "Voltar",
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clickable { navController.popBackStack() }
                     )
-                    Spacer(modifier = Modifier.width(60.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "Status do pagamento",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
+                        "Status do Serviço",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Card branco encostando no verde e nas laterais
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.7f),
-                shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 25.dp, bottomEnd = 25.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            servico?.let { s ->
+                // Card principal animado
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInVertically(
+                        initialOffsetY = { it / 2 },
+                        animationSpec = tween(durationMillis = 500)
+                    ) + fadeIn(animationSpec = tween(500))
                 ) {
-
-                    // Card verde do valor dentro do branco
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .height(70.dp)
-                            .background(
-                                color = Color(0xFF00A651),
-                                shape = RoundedCornerShape(12.dp)
-                            ),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F5)),
+                        elevation = CardDefaults.cardElevation(12.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(modifier = Modifier.padding(24.dp)) {
+                            val valorTotal = s.detalhes_valor?.valor_total ?: s.valor ?: 0.0
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp)
+                                    .background(valueGradient, RoundedCornerShape(20.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Valor a ser pago",
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        "R$ ${"%.2f".format(valorTotal)}",
+                                        color = Color.White,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Linhas de informação animadas individualmente
+                            LinhaInfoFuturistaAnimada("ID do Serviço", s.id?.toString() ?: "—", delay = 100)
+                            LinhaInfoFuturistaAnimada("Status", s.status ?: "PENDENTE", delay = 200)
+                            LinhaInfoFuturistaAnimada("Categoria", s.categoria?.nome ?: "Não informado", delay = 300)
+                            LinhaInfoFuturistaAnimada("Descrição", s.descricao ?: "Não informado", delay = 400)
+                            LinhaInfoFuturistaAnimada("Contratante", s.contratante?.usuario?.nome ?: "Não informado", delay = 500)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Botão Confirmar Valor fora do card
+                var botaoVisible by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(600)
+                    botaoVisible = true
+                }
+
+                AnimatedVisibility(
+                    visible = botaoVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { it / 2 },
+                        animationSpec = tween(500)
+                    ) + fadeIn(animationSpec = tween(500))
+                ) {
+                    Button(
+                        onClick = { navController.navigate("tela_confirmacao") },
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .height(65.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.horizontalGradient(listOf(Color(0xFF00C755), Color(0xFF019D31))),
+                                    shape = RoundedCornerShape(50)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = "Valor a ser pago",
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = "R$ 120.00",
+                                text = "Confirmar Valor",
                                 color = Color.White,
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    // Informações da transação (lado a lado)
-                    LinhaInfo("ID da Transferência", "00000123")
-
-                    Spacer(modifier = Modifier.height(15.dp))
-
-                    LinhaInfo("Status", "Concluído")
-
-                    Spacer(modifier = Modifier.height(15.dp))
-
-                    LinhaInfo("Valor da Transferência", "R$ 120.00")
-
-                    Spacer(modifier = Modifier.height(15.dp))
-
-                    LinhaInfo("Data", "21/09/25")
-
-                    Spacer(modifier = Modifier.height(15.dp))
-
-                    LinhaInfo("Hora", "11:09 AM")
+                Spacer(modifier = Modifier.height(30.dp))
+            } ?: run {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color(0xFF06C755),
+                        strokeWidth = 6.dp
+                    )
                 }
             }
-
-            Spacer(modifier = Modifier.height(65.dp))
-
-            // Três bolinhas fora do card branco (embaixo dele)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconCircle(Icons.Default.Map, "Confirmado", Color.LightGray)
-                IconCircle(Icons.Default.Description, "Processando", Color.LightGray)
-                IconCircle(Icons.Default.IncompleteCircle, "Concluído", Color(0xFF00A651))
-            }
         }
     }
 }
 
 @Composable
-fun IconCircle(icone: androidx.compose.ui.graphics.vector.ImageVector, descricao: String, cor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
+fun LinhaInfoFuturistaAnimada(titulo: String, valor: String, delay: Int = 0) {
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(delay.toLong())
+        visible = true
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(
+            initialOffsetX = { it / 2 },
+            animationSpec = tween(durationMillis = 400)
+        ) + fadeIn(animationSpec = tween(400))
+    ) {
+        Column(
             modifier = Modifier
-                .size(60.dp)
-                .background(color = cor, shape = CircleShape),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(vertical = 10.dp)
+                .background(
+                    Color.White.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Icon(
-                imageVector = icone,
-                contentDescription = descricao,
-                tint = if (cor == Color.LightGray) Color.White.copy(alpha = 0.8f) else Color.White,
-                modifier = Modifier.size(28.dp)
+            Text(
+                titulo,
+                fontSize = 13.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                valor,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF006622)
+            )
+            Divider(
+                color = Color.Gray.copy(alpha = 0.2f),
+                thickness = 1.dp,
+                modifier = Modifier.padding(vertical = 6.dp)
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(text = descricao, fontSize = 12.sp, color = Color.Black)
     }
-}
-
-@Composable
-fun LinhaInfo(titulo: String, valor: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = titulo,
-            fontSize = 13.sp,
-            color = Color.Gray.copy(alpha = 0.8f)
-        )
-        Text(
-            text = valor,
-            fontSize = 14.sp,
-            color = Color.Black,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-
-@Preview(showSystemUi = true, showBackground = true)
-@Composable
-fun PreviewTelaStatusPagamento() {
-    val navController = rememberNavController()
-    TelaStatusPagamento(navController = navController)
 }
