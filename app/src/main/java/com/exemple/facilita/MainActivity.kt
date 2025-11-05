@@ -87,6 +87,15 @@ fun AppNavHost(navController: NavHostController) {
             TelaNovaSenha(navController, codigo)
         }
         composable(
+            route = "tela_servico_categoria/{categoriaNome}",
+            arguments = listOf(
+                navArgument("categoriaNome") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val categoriaNome = backStackEntry.arguments?.getString("categoriaNome") ?: "Farmácia"
+            TelaCriarServicoCategoria(navController, categoriaNome)
+        }
+        composable(
             route = "tela_montar_servico/{endereco}?idCategoria={idCategoria}",
             arguments = listOf(
                 navArgument("endereco") { type = NavType.StringType },

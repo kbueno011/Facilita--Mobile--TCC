@@ -204,10 +204,30 @@ fun TelaHome(navController: NavController) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(listaServicos) { servico ->
+                    var pressed by remember { mutableStateOf(false) }
+                    val scale by animateFloatAsState(if (pressed) 0.95f else 1f)
+
                     Card(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .scale(scale)
+                            .pointerInput(servico) {
+                                detectTapGestures(
+                                    onPress = {
+                                        pressed = true
+                                        try {
+                                            awaitRelease()
+                                            // Navegar para tela de criar serviço por categoria
+                                        } finally {
+                                            pressed = false
+                                        }
+                                    },
+                                    onTap = {
+                                        navController.navigate("tela_servico_categoria/${servico.nome}")
+                                    }
+                                )
+                            },
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F6F6)),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {

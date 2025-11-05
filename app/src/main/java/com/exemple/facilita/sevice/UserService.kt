@@ -67,10 +67,14 @@ interface UserService {
         @Header("Authorization") authToken: String,
         @Body request: ServicoRequest
     ): Response<ServicoResponse>
-//
-//    @GET("contratante/pedidos") // ajuste o endpoint se necessário
-//    suspend fun getPedidos(@Header("Authorization") token: String): Response<ApiResponse>
 
+    @Headers("Content-Type: application/json")
+    @POST("v1/facilita/servico/from-categoria/{id_categoria}")
+    suspend fun criarServicoCategoria(
+        @Header("Authorization") authToken: String,
+        @retrofit2.http.Path("id_categoria") idCategoria: Int,
+        @Body request: ServicoCategoriaRequest
+    ): Response<ServicoCategoriaResponse>
 
 
 }
