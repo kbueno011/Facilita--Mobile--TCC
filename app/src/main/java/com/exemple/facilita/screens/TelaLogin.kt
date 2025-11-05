@@ -27,11 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import android.util.Log
 import com.exemple.facilita.R
 import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
 import com.exemple.facilita.model.RecuperarSenhaRequest
 import com.exemple.facilita.service.RetrofitFactory
+import com.exemple.facilita.utils.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -193,9 +195,22 @@ fun TelaLogin(navController: NavController) {
                                         withContext(Dispatchers.Main) {
                                             tentativaSenhaErrada = 0
 
-                                            // ✅ Salva o token localmente
+                                            // ✅ Salva o token localmente usando TokenManager
                                             val token = response.token
-                                            salvarToken(context, token)
+                                            val tipoConta = response.usuario.tipo_conta
+                                            val userId = response.usuario.id
+
+                                            Log.d("LOGIN_DEBUG", "Token recebido: ${token.take(50)}...")
+                                            Log.d("LOGIN_DEBUG", "Tipo de conta: $tipoConta")
+                                            Log.d("LOGIN_DEBUG", "User ID: $userId")
+
+                                            TokenManager.salvarToken(context, token, tipoConta, userId)
+
+                                            // Verificar se foi salvo
+                                            val tokenSalvo = TokenManager.obterToken(context)
+                                            val tipoContaSalvo = TokenManager.obterTipoConta(context)
+                                            Log.d("LOGIN_DEBUG", "Token salvo verificado: ${tokenSalvo?.take(50)}...")
+                                            Log.d("LOGIN_DEBUG", "Tipo conta salvo: $tipoContaSalvo")
 
                                             navController.navigate("tela_home")
                                         }
@@ -289,16 +304,6 @@ fun TelaLogin(navController: NavController) {
     }
 }
 
-// ✅ Funções utilitárias para salvar e recuperar o token
-fun salvarToken(context: Context, token: String) {
-    val sharedPreferences = context.getSharedPreferences("FacilitaPrefs", Context.MODE_PRIVATE)
-    sharedPreferences.edit().putString("token", token).apply()
-}
-
-fun obterToken(context: Context): String? {
-    val sharedPreferences = context.getSharedPreferences("FacilitaPrefs", Context.MODE_PRIVATE)
-    return sharedPreferences.getString("token", null)
-}
 
 @Composable
 fun TabButton(text: String, selected: Boolean, onClick: () -> Unit) {

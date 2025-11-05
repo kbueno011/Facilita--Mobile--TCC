@@ -1,11 +1,13 @@
 package com.exemple.facilita.screens
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,7 +53,14 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
     // Inicializa Google Places
     LaunchedEffect(Unit) {
         if (!Places.isInitialized()) {
-            Places.initialize(context, "SUA_API_KEY_AQUI")
+            try {
+                val apiKey = context.getString(com.exemple.facilita.R.string.google_maps_key)
+                Places.initialize(context, apiKey)
+                Log.d("PLACES_API", "Google Places inicializado com sucesso")
+            } catch (e: Exception) {
+                Log.e("PLACES_API", "Erro ao inicializar Google Places", e)
+                Toast.makeText(context, "Erro ao inicializar Google Places. Verifique a API Key.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -79,8 +88,21 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
     val service = RetrofitFactory().getUserService()
 
     fun enviarDados() {
+        // Validações
         if (cpf.isBlank() || necessidade.isBlank() || endereco.isBlank()) {
             Toast.makeText(context, "Preencha todos os campos", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Validar CPF (deve ter 11 dígitos)
+        if (cpf.length != 11) {
+            Toast.makeText(context, "CPF deve ter 11 dígitos", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Validar token
+        if (tokenUsuario.isBlank()) {
+            Toast.makeText(context, "Token não encontrado. Faça login novamente.", Toast.LENGTH_LONG).show()
             return
         }
 
@@ -100,6 +122,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
             longitude = longitude
         )
 
+
         service.criarLocalizacao(localRequest).enqueue(object : Callback<LocalizacaoResponse> {
             override fun onResponse(call: Call<LocalizacaoResponse>, response: Response<LocalizacaoResponse>) {
                 if (response.isSuccessful && response.body() != null) {
@@ -109,7 +132,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                     val perfilRequest = CompletarPerfilRequest(
                         id_localizacao = idEndereco,
                         cpf = cpf,
-                        necessidade = necessidade.uppercase()
+                        necessidade = necessidade  // Já vem em UPPERCASE do dropdown
                     )
 
                     service.cadastrarContratante("Bearer $tokenUsuario", perfilRequest)
@@ -176,7 +199,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
 
         Spacer(Modifier.height(24.dp))
 
-        // Campo Endereço com autocomplete
+        // Campo Endereço com autocomplete Google Places
         Box {
             OutlinedTextField(
                 value = endereco,
@@ -184,18 +207,27 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                     endereco = it
                     exibirSugestoes = true
                     if (it.length > 2) {
+                        Log.d("PLACES_API", "Buscando sugestões para: $it")
                         val request = FindAutocompletePredictionsRequest.builder()
                             .setQuery(it)
                             .setSessionToken(sessionToken)
                             .build()
                         placesClient.findAutocompletePredictions(request)
-                            .addOnSuccessListener { response -> sugestoes = response.autocompletePredictions }
-                            .addOnFailureListener { sugestoes = emptyList() }
+                            .addOnSuccessListener { response ->
+                                sugestoes = response.autocompletePredictions
+                                Log.d("PLACES_API", "Encontradas ${sugestoes.size} sugestões")
+                            }
+                            .addOnFailureListener { exception ->
+                                sugestoes = emptyList()
+                                Log.e("PLACES_API", "Erro ao buscar sugestões", exception)
+                                Toast.makeText(context, "Erro ao buscar endereços. Verifique sua conexão.", Toast.LENGTH_SHORT).show()
+                            }
                     } else {
                         sugestoes = emptyList()
                     }
                 },
                 label = { Text("Endereço") },
+                placeholder = { Text("Digite seu endereço...") },
                 leadingIcon = { Icon(Icons.Default.LocationOn, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -204,50 +236,77 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
             )
 
             if (exibirSugestoes && sugestoes.isNotEmpty()) {
-                androidx.compose.foundation.lazy.LazyColumn(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White)
-                        .padding(horizontal = 4.dp)
+                        .padding(top = 60.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    items(sugestoes) { prediction ->
-                        Text(
-                            text = prediction.getFullText(null).toString(),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    endereco = prediction.getFullText(null).toString()
-                                    exibirSugestoes = false
-                                    sugestoes = emptyList()
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .background(Color.White)
+                    ) {
+                        items(sugestoes) { prediction ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        endereco = prediction.getFullText(null).toString()
+                                        exibirSugestoes = false
+                                        sugestoes = emptyList()
 
-                                    val placeId = prediction.placeId
-                                    val placeRequest = FetchPlaceRequest.builder(
-                                        placeId,
-                                        listOf(Place.Field.ADDRESS_COMPONENTS, Place.Field.LAT_LNG)
-                                    ).setSessionToken(sessionToken).build()
+                                        val placeId = prediction.placeId
+                                        Log.d("PLACES_API", "Buscando detalhes do lugar: $placeId")
 
-                                    placesClient.fetchPlace(placeRequest)
-                                        .addOnSuccessListener { result ->
-                                            val place = result.place
-                                            val components = place.addressComponents
-                                            latitude = place.latLng?.latitude ?: 0.0
-                                            longitude = place.latLng?.longitude ?: 0.0
-                                            components?.asList()?.forEach { comp ->
-                                                when {
-                                                    comp.types.contains("route") -> logradouro = comp.name
-                                                    comp.types.contains("street_number") -> numero = comp.name
-                                                    comp.types.contains("sublocality") || comp.types.contains("neighborhood") -> bairro = comp.name
-                                                    comp.types.contains("locality") -> cidade = comp.name
-                                                    comp.types.contains("postal_code") -> cep = comp.name
+                                        val placeRequest = FetchPlaceRequest.builder(
+                                            placeId,
+                                            listOf(Place.Field.ADDRESS_COMPONENTS, Place.Field.LAT_LNG)
+                                        ).setSessionToken(sessionToken).build()
+
+                                        placesClient.fetchPlace(placeRequest)
+                                            .addOnSuccessListener { result ->
+                                                val place = result.place
+                                                val components = place.addressComponents
+                                                latitude = place.latLng?.latitude ?: 0.0
+                                                longitude = place.latLng?.longitude ?: 0.0
+
+                                                Log.d("PLACES_API", "Coordenadas: $latitude, $longitude")
+
+                                                components?.asList()?.forEach { comp ->
+                                                    when {
+                                                        comp.types.contains("route") -> logradouro = comp.name
+                                                        comp.types.contains("street_number") -> numero = comp.name
+                                                        comp.types.contains("sublocality") || comp.types.contains("neighborhood") -> bairro = comp.name
+                                                        comp.types.contains("locality") -> cidade = comp.name
+                                                        comp.types.contains("postal_code") -> cep = comp.name
+                                                    }
                                                 }
+
+                                                Log.d("PLACES_API", "Endereço processado: $logradouro, $numero, $bairro, $cidade, $cep")
                                             }
-                                        }
-                                        .addOnFailureListener {
-                                            Toast.makeText(context, "Falha ao obter detalhes do endereço", Toast.LENGTH_SHORT).show()
-                                        }
-                                }
-                                .padding(12.dp)
-                        )
+                                            .addOnFailureListener { exception ->
+                                                Log.e("PLACES_API", "Erro ao buscar detalhes do lugar", exception)
+                                                Toast.makeText(context, "Erro ao obter detalhes do endereço", Toast.LENGTH_SHORT).show()
+                                            }
+                                    }
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = prediction.getPrimaryText(null).toString(),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = prediction.getSecondaryText(null).toString(),
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -257,7 +316,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
 
         // Campo Necessidade
         var expanded by remember { mutableStateOf(false) }
-        val opcoes = listOf("Nenhuma", "Idoso", "PcD", "Gestante")
+        val opcoes = listOf("NENHUMA", "IDOSO", "PCD", "GESTANTE")
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
@@ -323,6 +382,7 @@ fun getNomeUsuario(context: Context): String {
     val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
     return sharedPref.getString("nomeUsuario", "") ?: ""
 }
+
 fun getTokenFromPreferences(context: Context): String {
     val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
     return sharedPref.getString("auth_token", "") ?: ""
@@ -335,3 +395,4 @@ fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLabelColor = Color(0xFF6B7280),
     unfocusedLabelColor = Color(0xFF9CA3AF)
 )
+

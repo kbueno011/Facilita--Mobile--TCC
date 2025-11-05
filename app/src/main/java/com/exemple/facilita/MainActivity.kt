@@ -87,11 +87,22 @@ fun AppNavHost(navController: NavHostController) {
             TelaNovaSenha(navController, codigo)
         }
         composable(
-            route = "tela_montar_servico/{endereco}",
-            arguments = listOf(navArgument("endereco") { type = NavType.StringType })
+            route = "tela_montar_servico/{endereco}?idCategoria={idCategoria}",
+            arguments = listOf(
+                navArgument("endereco") { type = NavType.StringType },
+                navArgument("idCategoria") {
+                    type = NavType.IntType
+                    defaultValue = 1
+                }
+            )
         ) { backStackEntry ->
             val endereco = backStackEntry.arguments?.getString("endereco")
-            TelaMontarServico(navController = navController, endereco = endereco)
+            val idCategoria = backStackEntry.arguments?.getInt("idCategoria") ?: 1
+            TelaMontarServico(
+                navController = navController,
+                endereco = endereco,
+                idCategoria = idCategoria
+            )
         }
 
         composable("tela_perfil") {

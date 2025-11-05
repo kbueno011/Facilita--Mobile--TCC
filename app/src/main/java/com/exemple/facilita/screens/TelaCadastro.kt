@@ -32,6 +32,8 @@ import com.exemple.facilita.R
 import com.exemple.facilita.model.Register
 import com.exemple.facilita.model.RegisterResponse
 import com.exemple.facilita.service.RetrofitFactory
+import com.exemple.facilita.utils.TextFormatUtils
+import com.exemple.facilita.utils.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,21 +81,12 @@ fun TelaCadastro(navController: NavController) {
         isNomeError = nome.isBlank() || nome.length < 2
         isEmailError = !Patterns.EMAIL_ADDRESS.matcher(email).matches()
         isConfirmarEmailError = email != confirmarEmail || confirmarEmail.isEmpty()
-        isTelefoneError = telefone.length < 10 || !telefone.matches(Regex("^[0-9]+$"))
+        isTelefoneError = !TextFormatUtils.isValidPhone(telefone)
         isSenhaError = !(hasUppercase && hasLowercase && hasDigit && hasSpecial && hasMinLength)
         isConfirmarSenhaError = senha != confirmarSenha || confirmarSenha.isEmpty()
 
         return !isNomeError && !isEmailError && !isConfirmarEmailError &&
                 !isTelefoneError && !isSenhaError && !isConfirmarSenhaError && aceitouTermos
-    }
-
-    // Função para salvar token no SharedPreferences
-    fun saveAuthToken(context: Context, token: String) {
-        val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            putString("auth_token", token)
-            apply()
-        }
     }
 
     Box(
@@ -194,12 +187,19 @@ fun TelaCadastro(navController: NavController) {
 
                     OutlinedTextField(
                         value = telefone,
-                        onValueChange = { telefone = it.filter { c -> c.isDigit() }; isTelefoneError = false },
-                        label = { Text("Telefone (somente números)") },
+                        onValueChange = {
+                            telefone = TextFormatUtils.formatPhone(it)
+                            isTelefoneError = false
+                        },
+                        label = { Text("Telefone") },
+                        placeholder = { Text("(00) 00000-0000") },
                         leadingIcon = { Icon(Icons.Default.Phone, null) },
                         modifier = Modifier.fillMaxWidth(),
                         isError = isTelefoneError,
-                        supportingText = { if (isTelefoneError) Text("Telefone inválido") }
+                        supportingText = {
+                            if (isTelefoneError) Text("Telefone inválido (mínimo 10 dígitos)")
+                            else Text("Digite DDD + número", fontSize = 12.sp, color = Color.Gray)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -269,10 +269,11 @@ fun TelaCadastro(navController: NavController) {
                     Button(
                         onClick = {
                             if (validar()) {
+                                val telefoneSemMascara = TextFormatUtils.unformatPhone(telefone)
                                 val cadastro = Register(
                                     nome = nome,
                                     email = email,
-                                    telefone = telefone,
+                                    telefone = telefoneSemMascara,
                                     senha_hash = senha,
                                     foto_perfil = "foto.jpeg"
                                 )
@@ -294,7 +295,7 @@ fun TelaCadastro(navController: NavController) {
 
                                             withContext(Dispatchers.Main) {
                                                 if (body != null) {
-                                                    saveAuthToken(context, body.token)
+                                                    TokenManager.salvarToken(context, body.token)
                                                     Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
 
                                                     if (body.proximo_passo == "escolher_tipo_conta") {
