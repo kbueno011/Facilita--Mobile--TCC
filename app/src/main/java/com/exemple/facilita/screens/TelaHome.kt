@@ -256,7 +256,7 @@ fun TelaHome(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
-                    .clickable { /* ação de suporte */ },
+                    .clickable { navController.navigate("tela_ajuda_suporte") },
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 elevation = CardDefaults.cardElevation(6.dp)
@@ -295,7 +295,7 @@ fun TelaHome(navController: NavController) {
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
-                                onClick = { /* abrir chat suporte */ },
+                                onClick = { navController.navigate("tela_ajuda_suporte") },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                                 shape = RoundedCornerShape(50)
                             ) {

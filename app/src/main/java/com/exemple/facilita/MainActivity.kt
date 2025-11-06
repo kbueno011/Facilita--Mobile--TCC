@@ -132,6 +132,14 @@ fun AppNavHost(navController: NavHostController) {
             TelaCompletarPerfilPrestador(navController)
         }
 
+        composable("tela_carteira") {
+            TelaCarteira(navController)
+        }
+
+        composable("tela_ajuda_suporte") {
+            TelaAjudaSuporte(navController)
+        }
+
 
     }
 }

@@ -26,11 +26,11 @@ fun TelaInicio1(navController: NavController) {
             .fillMaxSize()
             .background(Color(0xFF019D31))
     ) {
-
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Card com imagem
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -42,23 +42,13 @@ fun TelaInicio1(navController: NavController) {
                     bottomStart = 24.dp
                 )
             ) {
-                // Texto Pular no canto superior direito
-                Text(
-                    text = "Pular",
-                    color = Color.Gray,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .padding(start = 340.dp, top = 40.dp)
-                        .clickable {
-                            navController.navigate("tela_login")
-                        }
-                )
-                Image(
-                    painter = painterResource(com.exemple.facilita.R.drawable.iconmotomenu),
-                    contentDescription = "Icone da moto",
-                    modifier = Modifier.fillMaxSize()
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Image(
+                        painter = painterResource(com.exemple.facilita.R.drawable.iconmotomenu),
+                        contentDescription = "Icone da moto",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
 
             // Logo agrupamento
@@ -66,40 +56,44 @@ fun TelaInicio1(navController: NavController) {
                 painter = painterResource(com.exemple.facilita.R.drawable.agrupamento1),
                 contentDescription = "Logo tela inicial",
                 modifier = Modifier
-                    .height(50.dp)
-                    .width(45.dp)
-                    .padding(top = 20.dp, bottom = 20.dp)
+                    .height(60.dp)
+                    .width(55.dp)
+                    .padding(top = 20.dp, bottom = 12.dp)
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                modifier = Modifier.padding(top = 20.dp),
+                modifier = Modifier.padding(horizontal = 32.dp),
                 text = stringResource(com.exemple.facilita.R.string.bem_vindo),
                 color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                modifier = Modifier
-                    .width(250.dp)
-                    .padding(top = 10.dp),
-                text = stringResource(com.exemple.facilita.R.string.facilita_seu_dia),
-                color = Color.White,
-                fontSize = 19.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(50.dp))
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 12.dp),
+                text = stringResource(com.exemple.facilita.R.string.facilita_seu_dia),
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                lineHeight = 28.sp
+            )
 
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Botão Continuar fixo na parte inferior
             Button(
                 onClick = { navController.navigate("tela_inicio2") },
                 modifier = Modifier
-                    .width(250.dp)
-                    .height(60.dp),
-                shape = RoundedCornerShape(50),
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 32.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(50.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor = Color(0xFF019D31)
@@ -112,7 +106,23 @@ fun TelaInicio1(navController: NavController) {
                     fontWeight = FontWeight.Bold
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
+
+        // Botão Pular no canto superior direito
+        Text(
+            text = "Pular",
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 48.dp, end = 24.dp)
+                .clickable {
+                    navController.navigate("tela_login")
+                }
+        )
     }
 }
 
