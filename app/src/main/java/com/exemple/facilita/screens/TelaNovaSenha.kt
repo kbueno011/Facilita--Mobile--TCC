@@ -101,7 +101,7 @@ fun TelaNovaSenha(navController: NavController, codigo: String) {
                         }
 
                         isLoading = true
-                        val service = RetrofitFactory().getUserService()
+                        val service = RetrofitFactory.userService
                         val request = TrocarSenhaRequest(codigo = codigo, novaSenha = novaSenha)
 
                         service.trocarSenha(request).enqueue(object : Callback<TrocarSenhaResponse> {

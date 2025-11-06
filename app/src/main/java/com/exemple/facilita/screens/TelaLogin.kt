@@ -41,7 +41,7 @@ import retrofit2.await
 
 @Composable
 fun TelaLogin(navController: NavController) {
-    val facilitaApi = remember { RetrofitFactory().getUserService() }
+    val facilitaApi = remember { RetrofitFactory.userService }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 

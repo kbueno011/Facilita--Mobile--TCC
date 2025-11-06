@@ -4,17 +4,24 @@ import com.google.gson.GsonBuilder
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class RetrofitFactory {
+object RetrofitFactory {
 
     private val gson = GsonBuilder()
         .serializeNulls()
         .setLenient()
         .create()
 
-    private val retrofitUser: Retrofit = Retrofit.Builder()
+    private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl("https://servidor-facilita.onrender.com/")
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
-    fun getUserService(): UserService = retrofitUser.create(UserService::class.java)
+    val apiService: ApiService by lazy {
+        retrofit.create(ApiService::class.java)
+    }
+
+    // Mantém o UserService existente para não quebrar outras partes do app
+    val userService: UserService by lazy {
+        retrofit.create(UserService::class.java)
+    }
 }

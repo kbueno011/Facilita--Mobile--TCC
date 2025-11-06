@@ -157,7 +157,7 @@ fun TelaCriarServicoCategoria(
                     return@launch
                 }
 
-                val service = RetrofitFactory().getUserService()
+                val service = RetrofitFactory.userService
                 val request = ServicoCategoriaRequest(
                     descricao_personalizada = descricao,
                     valor_adicional = valorAdicional.toDoubleOrNull() ?: 0.0,

@@ -812,7 +812,7 @@ private fun enviarServicoParaAPI(
             )
 
             // Fazer chamada à API
-            val service = RetrofitFactory().getUserService()
+            val service = RetrofitFactory.userService
 
             // Logs para debug
             Log.d("API_DEBUG", "Token sendo usado: Bearer ${token.take(30)}...")

@@ -49,7 +49,7 @@ fun TelaPedidosHistorico(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val service = RetrofitFactory().getUserService()
+    val service = RetrofitFactory.userService
 
     // Carregar pedidos da API ao iniciar
     LaunchedEffect(Unit) {

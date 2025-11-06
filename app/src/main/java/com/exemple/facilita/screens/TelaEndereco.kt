@@ -275,7 +275,7 @@ fun TelaEnderecoContent(
 
         Button(
             onClick = {
-                val service = RetrofitFactory().getUserService()
+                val service = RetrofitFactory.userService
                 val request = LocalizacaoRequest(
                     logradouro = viewModel.road.value,
                     numero = viewModel.houseNumber.value,

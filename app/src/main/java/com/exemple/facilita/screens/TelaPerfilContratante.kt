@@ -1,5 +1,7 @@
+
 package com.exemple.facilita.screens
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,22 +18,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.exemple.facilita.R
 import com.exemple.facilita.components.BottomNavBar
+import com.exemple.facilita.utils.TokenManager // Importa o TokenManager
+import com.exemple.facilita.viewmodel.PerfilViewModel
 
 @Composable
-fun TelaPerfil(navController: NavController) {
+fun TelaPerfilContratante(
+    navController: NavController,
+    viewModel: PerfilViewModel = viewModel()
+) {
     var notificacoesAtivas by remember { mutableStateOf(false) }
+    val usuario by viewModel.usuario.collectAsState() // ✅ usa o novo campo do ViewModel
+    val context = LocalContext.current
 
-    Scaffold(
-        bottomBar = { BottomNavBar(navController) },
-    ) { innerPadding ->
+    // 🔑 Recupera o token salvo usando TokenManager
+    val token = TokenManager.obterToken(context)
 
+    // 🚀 Busca o perfil pelo token
+    LaunchedEffect(token) {
+        if (token != null) {
+            viewModel.carregarPerfil("Bearer $token") // ✅ agora só o token, sem ID
+        } else {
+            println("⚠️ Token não encontrado. Faça login novamente.")
+        }
+    }
+
+    Scaffold(bottomBar = { BottomNavBar(navController) }) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -40,29 +64,28 @@ fun TelaPerfil(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Perfil",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-
+            Text("Perfil", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Foto de perfil
-            Box(
-                modifier = Modifier.size(120.dp),
-                contentAlignment = Alignment.BottomEnd
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.foto_perfil), // Coloque uma imagem no drawable
-                    contentDescription = "Foto de perfil",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+            // 🖼️ Foto de perfil
+            Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.BottomEnd) {
+                val imagemPerfil = usuario?.foto_perfil
+                if (imagemPerfil != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(imagemPerfil),
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.size(120.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.foto_perfil),
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.size(120.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Adicionar foto",
@@ -78,7 +101,7 @@ fun TelaPerfil(navController: NavController) {
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            // Informações do perfil
+            // 🧾 Informações do Perfil
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -86,44 +109,20 @@ fun TelaPerfil(navController: NavController) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(20.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "Informações do Perfil",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color.Black
-                    )
-
-                    PerfilInfoItem(
-                        icon = Icons.Default.Person,
-                        label = "Jair Bolsonaro",
-                        onEdit = {}
-                    )
-                    PerfilInfoItem(
-                        icon = Icons.Default.LocationOn,
-                        label = "São Paulo/Osasco",
-                        onEdit = {}
-                    )
-                    PerfilInfoItem(
-                        icon = Icons.Default.Email,
-                        label = "jairbolsonaro@gmail.com",
-                        onEdit = {}
-                    )
-                    PerfilInfoItem(
-                        icon = Icons.Default.Phone,
-                        label = "(11) 946601277",
-                        onEdit = {}
-                    )
+                    Text("Informações do Perfil", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    PerfilInfoItem(Icons.Default.Person, usuario?.nome ?: "Carregando...") {}
+                    PerfilInfoItem(Icons.Default.Email, usuario?.email ?: "--") {}
+                    PerfilInfoItem(Icons.Default.Phone, usuario?.telefone ?: "--") {}
+                    PerfilInfoItem(Icons.Default.DateRange, "Criado em: ${usuario?.criado_em ?: "--"}") {}
                 }
             }
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            // Outras configurações
+            // ⚙️ Outras Configurações
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -131,17 +130,10 @@ fun TelaPerfil(navController: NavController) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(20.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    Text(
-                        text = "Outras Configurações",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color.Black
-                    )
+                    Text("Outras Configurações", fontWeight = FontWeight.Bold, fontSize = 15.sp)
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -149,19 +141,11 @@ fun TelaPerfil(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "Alterar senha",
-                                tint = Color.Black
-                            )
+                            Icon(Icons.Default.Lock, contentDescription = "Alterar senha")
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(text = "Alterar Senha", fontSize = 15.sp)
+                            Text("Alterar Senha")
                         }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = Color.Gray
-                        )
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
                     }
 
                     Row(
@@ -170,22 +154,16 @@ fun TelaPerfil(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Ativar notificações",
-                                tint = Color.Black
-                            )
+                            Icon(Icons.Default.Notifications, contentDescription = "Ativar notificações")
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(text = "Ativar Notificações", fontSize = 15.sp)
+                            Text("Ativar Notificações")
                         }
                         Switch(
                             checked = notificacoesAtivas,
                             onCheckedChange = { notificacoesAtivas = it },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF00A651),
-                                uncheckedThumbColor = Color.White,
-                                uncheckedTrackColor = Color.Gray
+                                checkedTrackColor = Color(0xFF00A651)
                             )
                         )
                     }
@@ -195,19 +173,15 @@ fun TelaPerfil(navController: NavController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                // ação de sair
+                                TokenManager.limparToken(context) // Limpa o token ao sair
                                 navController.navigate("tela_login") {
-                                    popUpTo("tela_home") { inclusive = true }
+                                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                 }
                             }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ExitToApp,
-                            contentDescription = "Sair",
-                            tint = Color.Black
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sair")
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = "Sair", fontSize = 15.sp)
+                        Text("Sair")
                     }
                 }
             }
@@ -216,7 +190,11 @@ fun TelaPerfil(navController: NavController) {
 }
 
 @Composable
-fun PerfilInfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onEdit: () -> Unit) {
+fun PerfilInfoItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onEdit: () -> Unit
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -225,13 +203,15 @@ fun PerfilInfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label:
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = icon, contentDescription = null, tint = Color.Black)
             Spacer(modifier = Modifier.width(10.dp))
-            Text(text = label, fontSize = 15.sp, color = Color.Black)
+            Text(label, fontSize = 15.sp)
         }
-        Icon(
-            imageVector = Icons.Default.Edit,
-            contentDescription = "Editar",
-            tint = Color.Gray,
-            modifier = Modifier.clickable { onEdit() }
-        )
+        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.clickable { onEdit() })
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun TelaPerfilContratantePreview() {
+    val navController = rememberNavController()
+    TelaPerfilContratante(navController = navController)
 }

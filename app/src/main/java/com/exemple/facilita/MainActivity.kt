@@ -15,7 +15,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.exemple.facilita.screens.*
-import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.viewmodel.EnderecoViewModel
 import com.exemplo.facilita.screens.TelaBuscarServico
 import com.google.android.libraries.places.api.Places
@@ -73,7 +72,6 @@ fun AppNavHost(navController: NavHostController) {
         }
         composable("tela_endereco") {
             val enderecoViewModel: EnderecoViewModel = viewModel()
-            val retrofitFactory = RetrofitFactory()
             TelaEnderecoContent(
                 navController = navController,
                 viewModel = enderecoViewModel,
@@ -115,7 +113,7 @@ fun AppNavHost(navController: NavHostController) {
         }
 
         composable("tela_perfil") {
-            TelaPerfil(navController)
+            TelaPerfilContratante(navController)
         }
         composable("tela_status_pagamento") {
             TelaStatusPagamento(navController)

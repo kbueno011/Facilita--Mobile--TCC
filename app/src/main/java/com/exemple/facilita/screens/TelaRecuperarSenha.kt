@@ -165,7 +165,7 @@ fun TelaRecuperacaoSenha(navController: NavController) {
                                 } else {
                                     isLoading = true
                                     val telefoneCompleto = "+55$phoneNumber"
-                                    val service = RetrofitFactory().getUserService()
+                                    val service = RetrofitFactory.userService
 
                                     service.recuperarSenhaTelefone(
                                         RecuperarSenhaTelefoneRequest(
@@ -225,7 +225,7 @@ fun TelaRecuperacaoSenha(navController: NavController) {
                             Toast.makeText(context, "Preencha todos os dígitos.", Toast.LENGTH_SHORT).show()
                         } else {
                             isLoading = true
-                            val service = RetrofitFactory().getUserService()
+                            val service = RetrofitFactory.userService
                             val request = VerificarCodigoRequest(codigo = codigoCompleto)
 
                             service.verificarCodigo(request)

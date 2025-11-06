@@ -85,7 +85,7 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
     var latitude by remember { mutableStateOf(0.0) }
     var longitude by remember { mutableStateOf(0.0) }
 
-    val service = RetrofitFactory().getUserService()
+    val service = RetrofitFactory.userService
 
     fun enviarDados() {
         // Validações

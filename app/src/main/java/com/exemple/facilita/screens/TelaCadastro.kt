@@ -42,7 +42,7 @@ import retrofit2.await
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TelaCadastro(navController: NavController) {
-    val facilitaApi = remember { RetrofitFactory().getUserService() }
+    val facilitaApi = remember { RetrofitFactory.userService }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
