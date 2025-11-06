@@ -57,7 +57,7 @@ fun TelaPedidosHistorico(navController: NavController) {
             try {
                 val token = TokenManager.obterToken(context)
                 if (token == null) {
-                    errorMessage = "Token não encontrado. Faça login novamente."
+                    errorMessage = "Token não encontrado Faça login novamente."
                     isLoading = false
                     return@launch
                 }
