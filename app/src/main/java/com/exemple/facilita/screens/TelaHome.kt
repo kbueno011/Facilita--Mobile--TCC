@@ -23,15 +23,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import com.exemple.facilita.R
 import com.exemple.facilita.components.BottomNavBar
+import com.exemple.facilita.utils.TokenManager
 
 @Composable
 fun TelaHome(navController: NavController) {
+    val context = LocalContext.current
+    val nomeUsuario = TokenManager.obterNomeUsuario(context) ?: "Usuário"
+
     Scaffold(bottomBar = { BottomNavBar(navController) }) { paddingValues ->
         Column(
             modifier = Modifier
@@ -50,7 +55,7 @@ fun TelaHome(navController: NavController) {
                 Column {
                     Text(text = "Rua Elton Silva, 509", fontSize = 12.sp, color = Color.Gray)
                     Text(
-                        text = "Olá, Lara",
+                        text = "Olá, $nomeUsuario",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF2D2D2D)

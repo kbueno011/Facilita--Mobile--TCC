@@ -30,11 +30,11 @@ fun TelaInicio1(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Card com imagem
+            // Card com imagem - 55% da tela
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(474.dp),
+                    .fillMaxHeight(0.55f),
                 shape = RoundedCornerShape(
                     topStart = 0.dp,
                     topEnd = 0.dp,
@@ -51,63 +51,74 @@ fun TelaInicio1(navController: NavController) {
                 }
             }
 
-            // Logo agrupamento
-            Image(
-                painter = painterResource(com.exemple.facilita.R.drawable.agrupamento1),
-                contentDescription = "Logo tela inicial",
+            // Conteúdo - 45% da tela
+            Column(
                 modifier = Modifier
-                    .height(60.dp)
-                    .width(55.dp)
-                    .padding(top = 20.dp, bottom = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                modifier = Modifier.padding(horizontal = 32.dp),
-                text = stringResource(com.exemple.facilita.R.string.bem_vindo),
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp, vertical = 12.dp),
-                text = stringResource(com.exemple.facilita.R.string.facilita_seu_dia),
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                lineHeight = 28.sp
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Botão Continuar fixo na parte inferior
-            Button(
-                onClick = { navController.navigate("tela_inicio2") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 32.dp, vertical = 0.dp),
-                shape = RoundedCornerShape(50.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF019D31)
-                ),
-                border = BorderStroke(width = 2.dp, color = Color(0xFF019D31))
+                    .fillMaxSize()
+                    .padding(horizontal = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "CONTINUAR",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = 28.dp)
+                ) {
+                    // Logo agrupamento
+                    Image(
+                        painter = painterResource(com.exemple.facilita.R.drawable.agrupamento1),
+                        contentDescription = "Logo tela inicial",
+                        modifier = Modifier
+                            .height(55.dp)
+                            .width(50.dp)
+                    )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Text(
+                        text = stringResource(com.exemple.facilita.R.string.bem_vindo),
+                        color = Color.White,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 36.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = stringResource(com.exemple.facilita.R.string.facilita_seu_dia),
+                        color = Color.White.copy(alpha = 0.95f),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Normal,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 26.sp
+                    )
+                }
+
+                // Botão mais próximo do texto
+                Column(
+                    modifier = Modifier.padding(bottom = 28.dp)
+                ) {
+                    Button(
+                        onClick = { navController.navigate("tela_inicio2") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color(0xFF019D31)
+                        ),
+                        border = BorderStroke(width = 2.dp, color = Color(0xFF019D31))
+                    ) {
+                        Text(
+                            text = "CONTINUAR",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
 
         // Botão Pular no canto superior direito

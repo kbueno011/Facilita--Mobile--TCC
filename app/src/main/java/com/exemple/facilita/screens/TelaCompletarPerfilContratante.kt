@@ -33,6 +33,7 @@ import com.exemple.facilita.model.CompletarPerfilResponse
 import com.exemple.facilita.model.LocalizacaoRequest
 import com.exemple.facilita.model.LocalizacaoResponse
 import com.exemple.facilita.service.RetrofitFactory
+import com.exemple.facilita.utils.TokenManager
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.AutocompletePrediction
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken
@@ -47,8 +48,8 @@ import retrofit2.Response
 @Composable
 fun TelaCompletarPerfilContratante(navController: NavController) {
     val context = LocalContext.current
-    val nomeUsuario by remember { mutableStateOf(getNomeUsuario(context)) }
-    val tokenUsuario by remember { mutableStateOf(getTokenFromPreferences(context)) }
+    val nomeUsuario by remember { mutableStateOf(TokenManager.obterNomeUsuario(context) ?: "") }
+    val tokenUsuario by remember { mutableStateOf(TokenManager.obterToken(context) ?: "") }
 
     // Inicializa Google Places
     LaunchedEffect(Unit) {
@@ -377,16 +378,9 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
     }
 }
 
-// Funções utilitárias
-fun getNomeUsuario(context: Context): String {
-    val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-    return sharedPref.getString("nomeUsuario", "") ?: ""
-}
-
-fun getTokenFromPreferences(context: Context): String {
-    val sharedPref = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-    return sharedPref.getString("auth_token", "") ?: ""
-}
+// Funções utilitárias removidas - usar TokenManager ao invés:
+// - TokenManager.obterNomeUsuario(context)
+// - TokenManager.obterToken(context)
 
 @Composable
 fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(

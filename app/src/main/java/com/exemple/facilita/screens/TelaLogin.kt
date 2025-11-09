@@ -1,25 +1,30 @@
 package com.exemple.facilita.screens
 
-import android.content.Context
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,7 +36,6 @@ import android.util.Log
 import com.exemple.facilita.R
 import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
-import com.exemple.facilita.model.RecuperarSenhaRequest
 import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.utils.TokenManager
 import kotlinx.coroutines.Dispatchers
@@ -46,11 +50,25 @@ fun TelaLogin(navController: NavController) {
     val context = LocalContext.current
 
     var tentativaSenhaErrada by remember { mutableStateOf(0) }
-    var selectedTab by remember { mutableStateOf(0) }
-    var email by remember { mutableStateOf("") }
+    var loginType by remember { mutableStateOf("email") } // "email" ou "celular"
+    var loginInput by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var senhaVisivel by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    // Animação do toggle
+    val emailScale by animateFloatAsState(
+        targetValue = if (loginType == "email") 1.05f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "emailScale"
+    )
+
+    val celularScale by animateFloatAsState(
+        targetValue = if (loginType == "celular") 1.05f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "celularScale"
+    )
 
     Box(
         modifier = Modifier
@@ -61,7 +79,7 @@ fun TelaLogin(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- Logo e imagens ---
+            // --- Parte superior original (Logo e imagens) ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,134 +113,255 @@ fun TelaLogin(navController: NavController) {
                 )
             }
 
-            // --- Card branco ---
+            // --- Card branco moderno ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(4f)
                     .background(
                         color = Color.White,
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                     )
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp),
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Fazer login",
-                        fontSize = 20.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 24.dp)
                     )
 
-                    // Tabs
+                    // Toggle Email/Celular - Moderno com animação
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 10.dp),
-                        horizontalArrangement = Arrangement.Center
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(Color(0xFFF5F5F5))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        TabButton("Email", selectedTab == 0) { selectedTab = 0 }
+                        // Opção Email
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .scale(emailScale)
+                                .clip(RoundedCornerShape(24.dp))
+                                .then(
+                                    if (loginType == "email")
+                                        Modifier.background(
+                                            brush = Brush.horizontalGradient(
+                                                listOf(Color(0xFF019D31), Color(0xFF06C755))
+                                            )
+                                        )
+                                    else Modifier.background(Color.Transparent)
+                                )
+                                .clickable {
+                                    loginType = "email"
+                                    loginInput = ""
+                                    errorMessage = null
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = "Email",
+                                    tint = if (loginType == "email") Color.White else Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Email",
+                                    fontSize = 16.sp,
+                                    fontWeight = if (loginType == "email") FontWeight.Bold else FontWeight.Normal,
+                                    color = if (loginType == "email") Color.White else Color.Gray
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        TabButton("Celular", selectedTab == 1) { selectedTab = 1 }
+
+                        // Opção Celular
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .scale(celularScale)
+                                .clip(RoundedCornerShape(24.dp))
+                                .then(
+                                    if (loginType == "celular")
+                                        Modifier.background(
+                                            brush = Brush.horizontalGradient(
+                                                listOf(Color(0xFF019D31), Color(0xFF06C755))
+                                            )
+                                        )
+                                    else Modifier.background(Color.Transparent)
+                                )
+                                .clickable {
+                                    loginType = "celular"
+                                    loginInput = ""
+                                    errorMessage = null
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Phone,
+                                    contentDescription = "Celular",
+                                    tint = if (loginType == "celular") Color.White else Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Celular",
+                                    fontSize = 16.sp,
+                                    fontWeight = if (loginType == "celular") FontWeight.Bold else FontWeight.Normal,
+                                    color = if (loginType == "celular") Color.White else Color.Gray
+                                )
+                            }
+                        }
                     }
 
-                    // Campo Email
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Campo de Login (Email ou Celular)
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        placeholder = { Text("seuemail@gmail.com") },
-                        leadingIcon = {
-                            Icon(imageVector = Icons.Default.Email, contentDescription = null)
+                        value = loginInput,
+                        onValueChange = { loginInput = it; errorMessage = null },
+                        label = { Text(if (loginType == "email") "Email" else "Celular") },
+                        placeholder = {
+                            Text(if (loginType == "email") "seuemail@gmail.com" else "(00) 00000-0000")
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (loginType == "email") Icons.Default.Email else Icons.Default.Phone,
+                                contentDescription = null,
+                                tint = Color(0xFF019D31)
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = if (loginType == "email") KeyboardType.Email else KeyboardType.Phone
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF019D31),
+                            focusedLabelColor = Color(0xFF019D31),
+                            cursorColor = Color(0xFF019D31)
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Campo Senha com visibilidade
+                    // Campo Senha
                     OutlinedTextField(
                         value = senha,
-                        onValueChange = { senha = it },
+                        onValueChange = { senha = it; errorMessage = null },
                         label = { Text("Senha") },
                         placeholder = { Text("Digite sua senha") },
                         visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
                         leadingIcon = {
-                            Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF019D31)
+                            )
                         },
                         trailingIcon = {
-                            val image = if (senhaVisivel)
-                                Icons.Filled.VisibilityOff
-                            else
-                                Icons.Filled.Visibility
-
                             IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
-                                Icon(imageVector = image, contentDescription = "Mostrar/Ocultar senha")
+                                Icon(
+                                    imageVector = if (senhaVisivel) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = "Mostrar/Ocultar senha",
+                                    tint = Color.Gray
+                                )
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF019D31),
+                            focusedLabelColor = Color(0xFF019D31),
+                            cursorColor = Color(0xFF019D31)
+                        )
                     )
 
+                    // Mensagem de erro
                     if (errorMessage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = errorMessage!!,
                             color = Color.Red,
                             fontSize = 14.sp,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    // --- Botão Entrar ---
+                    // Botão Entrar
                     Button(
                         onClick = {
-                            if (email.isNotBlank() && senha.isNotBlank()) {
+                            if (loginInput.isNotBlank() && senha.isNotBlank()) {
+                                isLoading = true
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
                                         val login = Login(
-                                            login = email,
+                                            login = loginInput,
                                             senha = senha
                                         )
 
                                         val response: LoginResponse = facilitaApi.loginUser(login).await()
 
                                         withContext(Dispatchers.Main) {
+                                            isLoading = false
                                             tentativaSenhaErrada = 0
 
-                                            // ✅ Salva o token localmente usando TokenManager
                                             val token = response.token
                                             val tipoConta = response.usuario.tipo_conta
                                             val userId = response.usuario.id
+                                            val nomeUsuario = response.usuario.nome
 
                                             Log.d("LOGIN_DEBUG", "Token recebido: ${token.take(50)}...")
                                             Log.d("LOGIN_DEBUG", "Tipo de conta: $tipoConta")
                                             Log.d("LOGIN_DEBUG", "User ID: $userId")
+                                            Log.d("LOGIN_DEBUG", "Nome do usuário: $nomeUsuario")
 
-                                            TokenManager.salvarToken(context, token, tipoConta, userId)
+                                            TokenManager.salvarToken(context, token, tipoConta, userId, nomeUsuario)
 
-                                            // Verificar se foi salvo
                                             val tokenSalvo = TokenManager.obterToken(context)
                                             val tipoContaSalvo = TokenManager.obterTipoConta(context)
+                                            val nomeSalvo = TokenManager.obterNomeUsuario(context)
                                             Log.d("LOGIN_DEBUG", "Token salvo verificado: ${tokenSalvo?.take(50)}...")
                                             Log.d("LOGIN_DEBUG", "Tipo conta salvo: $tipoContaSalvo")
+                                            Log.d("LOGIN_DEBUG", "Nome salvo: $nomeSalvo")
 
                                             navController.navigate("tela_home")
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {
+                                            isLoading = false
                                             tentativaSenhaErrada++
-                                            errorMessage = "Email ou senha incorretos"
+                                            errorMessage = "Login ou senha incorretos"
+                                            Log.e("LOGIN_ERROR", "Erro no login", e)
                                         }
                                     }
                                 }
                             } else {
-                                errorMessage = "Preencha todos os campos corretamente"
+                                errorMessage = "Preencha todos os campos"
                             }
                         },
                         modifier = Modifier
@@ -230,7 +369,8 @@ fun TelaLogin(navController: NavController) {
                             .height(56.dp),
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues()
+                        contentPadding = PaddingValues(),
+                        enabled = !isLoading
                     ) {
                         Box(
                             modifier = Modifier
@@ -243,53 +383,50 @@ fun TelaLogin(navController: NavController) {
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Entrar",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = "Entrar",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
 
-                    // --- Link Recuperar Senha ---
+                    // Link Esqueceu a senha
                     if (tentativaSenhaErrada >= 2) {
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Esqueceu a senha?",
                             color = Color(0xFF019D31),
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .padding(top = 16.dp)
-                                .clickable {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        try {
-                                            val request = RecuperarSenhaRequest(email = email)
-                                            val response = facilitaApi.recuperarSenha(request).await()
-
-                                            withContext(Dispatchers.Main) {
-                                                errorMessage = response.message
-                                                navController.navigate("tela_recuperar_senha")
-                                            }
-                                        } catch (e: Exception) {
-                                            withContext(Dispatchers.Main) {
-                                                errorMessage = "Erro ao solicitar recuperação de senha"
-                                            }
-                                        }
-                                    }
-                                }
+                            fontSize = 15.sp,
+                            modifier = Modifier.clickable {
+                                navController.navigate("tela_recuperar_senha")
+                            }
                         )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // --- Link Cadastro ---
+                    // Link Cadastro
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Não possui uma conta?", fontSize = 14.sp, color = Color.Black)
                         Text(
-                            text = " Cadastre-se aqui",
+                            text = "Não possui uma conta? ",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                        Text(
+                            text = "Cadastre-se",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF019D31),
@@ -304,21 +441,6 @@ fun TelaLogin(navController: NavController) {
     }
 }
 
-
-@Composable
-fun TabButton(text: String, selected: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.height(40.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) Color(0xFF019D31) else Color.Gray,
-            contentColor = Color.White
-        )
-    ) {
-        Text(text)
-    }
-}
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

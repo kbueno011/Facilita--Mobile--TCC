@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.components.BottomNavBar
+import com.exemple.facilita.utils.TokenManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -54,12 +56,13 @@ enum class TipoMovimentacao {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaCarteira(navController: NavController) {
+    val context = LocalContext.current
     var mostrarSaldo by remember { mutableStateOf(true) }
     var mostrarDialogDepositar by remember { mutableStateOf(false) }
     var mostrarDialogSacar by remember { mutableStateOf(false) }
 
     val saldo = "R$ 1.250,00"
-    val nomeUsuario = "Adriana"
+    val nomeUsuario = TokenManager.obterNomeUsuario(context) ?: "Usuário"
 
     // Animação de entrada
     var visible by remember { mutableStateOf(false) }

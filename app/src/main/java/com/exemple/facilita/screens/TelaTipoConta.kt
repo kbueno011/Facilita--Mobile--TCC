@@ -2,11 +2,14 @@ package com.exemple.facilita.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,13 +39,13 @@ fun TelaTipoConta(navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
-            shape = RoundedCornerShape(bottomEnd = 24.dp, bottomStart = 24.dp),
+            shape = RoundedCornerShape(bottomEnd = 32.dp, bottomStart = 32.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF019D31))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(22.dp)
+                    .padding(24.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
@@ -53,121 +56,176 @@ fun TelaTipoConta(navController: NavController) {
                         .clickable { navController.popBackStack() }
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Qual tipo de conta deseja criar?",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    lineHeight = 30.sp
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Escolha a opção que mais combina com seu perfil.",
-                    fontSize = 18.sp,
-                    color = Color.White
+                    fontSize = 15.sp,
+                    color = Color.White.copy(alpha = 0.95f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(72.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         // Opção 1 - Contratante
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clickable { selectedOption = "contratante" },
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (selectedOption == "contratante") Color(0xFFE8F5E9) else Color(0xFFF0F0F0)
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(15.dp)
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.icontiposervico),
-                    contentDescription = "Ícone contratante",
-                    modifier = Modifier
-                        .height(70.dp)
-                        .width(70.dp)
-                )
-                Column(Modifier.padding(16.dp)) {
-                    Text("Contratante", fontWeight = FontWeight.Bold)
-                    Text("Quero contratar prestadores de serviço para minhas necessidades.")
-                }
-            }
-        }
+        OpcoesCard(
+            isSelected = selectedOption == "contratante",
+            icon = R.drawable.icontiposervico,
+            titulo = "Contratante",
+            descricao = "Quero contratar prestadores de serviço para minhas necessidades.",
+            onClick = { selectedOption = "contratante" }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Opção 2 - Prestador de serviço
-        Card(
+        OpcoesCard(
+            isSelected = selectedOption == "prestador",
+            icon = R.drawable.icontiposervico,
+            titulo = "Prestador de serviço",
+            descricao = "Quero oferecer meus serviços e encontrar clientes.",
+            onClick = { selectedOption = "prestador" }
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Botão Continuar
+        if (selectedOption != null) {
+            Button(
+                onClick = {
+                    when (selectedOption) {
+                        "contratante" -> navController.navigate("tela_completar_perfil_contratante")
+                        "prestador" -> navController.navigate("telaPrestador")
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 32.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                listOf(Color(0xFF019D31), Color(0xFF06C755))
+                            ),
+                            shape = RoundedCornerShape(50)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Continuar",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OpcoesCard(
+    isSelected: Boolean,
+    icon: Int,
+    titulo: String,
+    descricao: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 6.dp else 2.dp)
+    ) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .clickable { selectedOption = "prestador" },
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (selectedOption == "prestador") Color(0xFFE8F5E9) else Color(0xFFF0F0F0)
-            )
+                .then(
+                    if (isSelected) Modifier.border(
+                        width = 2.dp,
+                        color = Color(0xFF019D31),
+                        shape = RoundedCornerShape(20.dp)
+                    ) else Modifier
+                )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(15.dp)
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(R.drawable.icontiposervico),
-                    contentDescription = "Ícone prestador",
+                // Ícone
+                Box(
                     modifier = Modifier
-                        .height(70.dp)
-                        .width(70.dp)
-                )
-                Column(Modifier.padding(16.dp)) {
-                    Text("Prestador de serviço", fontWeight = FontWeight.Bold)
-                    Text("Quero oferecer meus serviços e encontrar clientes.")
+                        .size(70.dp)
+                        .background(
+                            color = if (isSelected) Color(0xFF019D31).copy(alpha = 0.1f)
+                            else Color.White,
+                            shape = RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(icon),
+                        contentDescription = titulo,
+                        modifier = Modifier.size(50.dp)
+                    )
                 }
-            }
-        }
 
-        Spacer(modifier = Modifier.height(150.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-        // Botão Entrar
-        Button(
-            onClick = {
-                when (selectedOption) {
-                    "contratante" -> navController.navigate("tela_completar_perfil_contratante")
-                    "prestador" -> navController.navigate("telaPrestador")
+                // Texto
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = titulo,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = if (isSelected) Color(0xFF019D31) else Color(0xFF2D2D2D)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = descricao,
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        lineHeight = 20.sp
+                    )
                 }
-            },
-            enabled = selectedOption != null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .height(56.dp),
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            contentPadding = PaddingValues()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.horizontalGradient(listOf(Color(0xFF019D31), Color(0xFF06C755))),
-                        shape = RoundedCornerShape(50)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Entrar",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+
+                // Ícone de seleção
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Selecionado",
+                        tint = Color(0xFF019D31),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
     }

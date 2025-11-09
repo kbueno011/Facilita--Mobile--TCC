@@ -12,22 +12,28 @@ object TokenManager {
     private const val TOKEN_KEY = "auth_token"
     private const val TIPO_CONTA_KEY = "tipo_conta"
     private const val USER_ID_KEY = "user_id"
+    private const val USER_NAME_KEY = "user_name"
 
     /**
      * Salva o token JWT e informações do usuário no SharedPreferences
      */
-    fun salvarToken(context: Context, token: String, tipoConta: String? = null, userId: Int? = null) {
+    fun salvarToken(context: Context, token: String, tipoConta: String? = null, userId: Int? = null, nomeUsuario: String? = null) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString(TOKEN_KEY, token)
             tipoConta?.let { putString(TIPO_CONTA_KEY, it) }
             userId?.let { putInt(USER_ID_KEY, it) }
+            nomeUsuario?.let { putString(USER_NAME_KEY, it) }
             apply()
         }
 
         // Também salva no FacilitaPrefs para compatibilidade com código legado
         val legacyPrefs = context.getSharedPreferences("FacilitaPrefs", Context.MODE_PRIVATE)
-        legacyPrefs.edit().putString("token", token).apply()
+        legacyPrefs.edit().apply {
+            putString("token", token)
+            nomeUsuario?.let { putString("nomeUsuario", it) }
+            apply()
+        }
     }
 
     /**
@@ -100,6 +106,22 @@ object TokenManager {
      */
     fun isContratante(context: Context): Boolean {
         return obterTipoConta(context) == "CONTRATANTE"
+    }
+
+    /**
+     * Obtém o nome do usuário
+     */
+    fun obterNomeUsuario(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        var nome = prefs.getString(USER_NAME_KEY, null)
+
+        // Se não encontrar, tenta buscar no FacilitaPrefs (compatibilidade)
+        if (nome == null) {
+            val legacyPrefs = context.getSharedPreferences("FacilitaPrefs", Context.MODE_PRIVATE)
+            nome = legacyPrefs.getString("nomeUsuario", null)
+        }
+
+        return nome
     }
 }
 
