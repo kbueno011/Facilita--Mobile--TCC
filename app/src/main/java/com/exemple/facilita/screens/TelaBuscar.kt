@@ -2,6 +2,7 @@ package com.exemplo.facilita.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -20,165 +21,175 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.exemple.facilita.R
+import com.exemple.facilita.components.BottomNavBar
 
 @Composable
 fun TelaBuscarServico(navController: NavController) {
     val textoBusca = remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF2F2F2))
-            .padding(16.dp)
-    ) {
-        // Campo de busca
-        Card(
+    Scaffold(
+        bottomBar = { BottomNavBar(navController) }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(50),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                .fillMaxSize()
+                .background(Color(0xFFF2F2F2))
+                .padding(paddingValues)
+                .padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Buscar",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                BasicTextField(
-                    value = textoBusca.value,
-                    onValueChange = { textoBusca.value = it },
-                    textStyle = TextStyle(fontSize = 18.sp, color = Color.DarkGray),
-                    decorationBox = { innerTextField ->
-                        if (textoBusca.value.isEmpty()) {
-                            Text(
-                                text = "Solicite seu serviço",
-                                color = Color.Gray,
-                                fontSize = 18.sp
-                            )
-                        }
-                        innerTextField()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Sugestões rápidas
-        Text(
-            text = "Sugestões rápidas",
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = Color(0xFF6C6C6C)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            SugestaoRapida("Promoções")
-            SugestaoRapida("Mercado")
-            SugestaoRapida("Shopping")
-            SugestaoRapida("Feira")
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Cards de categorias
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                CardServico(
-                    titulo = "Mercado",
-                    cor = Color(0xFFB6D048),
-                    imagem = R.drawable.mercado1,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp),
-                    tamanhoImagem = 95.dp,
-                    imgAlign = Alignment.CenterEnd
-                )
-                CardServico(
-                    titulo = "Feira",
-                    cor = Color(0xFF75CD8F  ),
-                    imagem = R.drawable.feira1,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp),
-                    tamanhoImagem = 180.dp,
-                    imgAlign = Alignment.TopEnd
-                )
-            }
-
-            CardServico(
-                titulo = "Farmacia",
-                cor = Color(0xFF6FAA8A),
-                imagem = R.drawable.farmacia1,
+            // Campo de busca
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
-                tamanhoImagem = 200.dp,
-                imgAlign = Alignment.CenterEnd
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    .height(48.dp),
+                shape = RoundedCornerShape(50),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                CardServico(
-                    titulo = "Shopping",
-                    cor = Color(0xFF388C3B),
-                    imagem = R.drawable.shopping1,
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp),
-                    tamanhoImagem = 110.dp,
-                    imgAlign = Alignment.CenterEnd,
-
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(20.dp)
                     )
-                CardServico(
-                    titulo = "Correios",
-                    cor = Color(0xFFD7BA0D),
-                    imagem = R.drawable.correio1,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp),
-                    tamanhoImagem = 80.dp,
-                    imgAlign = Alignment.CenterEnd
-                )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    BasicTextField(
+                        value = textoBusca.value,
+                        onValueChange = { textoBusca.value = it },
+                        textStyle = TextStyle(fontSize = 18.sp, color = Color.DarkGray),
+                        decorationBox = { innerTextField ->
+                            if (textoBusca.value.isEmpty()) {
+                                Text(
+                                    text = "Solicite seu serviço",
+                                    color = Color.Gray,
+                                    fontSize = 18.sp
+                                )
+                            }
+                            innerTextField()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
-            CardServico(
-                titulo = "Monte o seu serviço",
-                cor = Color(0xFF496A52),
-                imagem = R.drawable.caminhao_servico,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp),
-                tamanhoImagem = 200.dp,
-                imgAlign = Alignment.CenterEnd
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Sugestões rápidas
+            Text(
+                text = "Sugestões rápidas",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color(0xFF6C6C6C)
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SugestaoRapida("Promoções")
+                SugestaoRapida("Mercado")
+                SugestaoRapida("Shopping")
+                SugestaoRapida("Feira")
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Cards de categorias
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    CardServico(
+                        titulo = "Mercado",
+                        cor = Color(0xFFB6D048),
+                        imagem = R.drawable.mercado1,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(120.dp),
+                        tamanhoImagem = 95.dp,
+                        imgAlign = Alignment.CenterEnd,
+                        navController = navController
+                    )
+                    CardServico(
+                        titulo = "Feira",
+                        cor = Color(0xFF75CD8F),
+                        imagem = R.drawable.feira1,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(120.dp),
+                        tamanhoImagem = 180.dp,
+                        imgAlign = Alignment.TopEnd,
+                        navController = navController
+                    )
+                }
+
+                CardServico(
+                    titulo = "Farmacia",
+                    cor = Color(0xFF6FAA8A),
+                    imagem = R.drawable.farmacia1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    tamanhoImagem = 200.dp,
+                    imgAlign = Alignment.CenterEnd,
+                    navController = navController
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    CardServico(
+                        titulo = "Shopping",
+                        cor = Color(0xFF388C3B),
+                        imagem = R.drawable.shopping1,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(120.dp),
+                        tamanhoImagem = 110.dp,
+                        imgAlign = Alignment.CenterEnd,
+                        navController = navController
+                    )
+                    CardServico(
+                        titulo = "Correios",
+                        cor = Color(0xFFD7BA0D),
+                        imagem = R.drawable.correio1,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(120.dp),
+                        tamanhoImagem = 80.dp,
+                        imgAlign = Alignment.CenterEnd,
+                        navController = navController
+                    )
+                }
+
+                CardServico(
+                    titulo = "Monte o seu serviço",
+                    cor = Color(0xFF496A52),
+                    imagem = R.drawable.caminhao_servico,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    tamanhoImagem = 200.dp,
+                    imgAlign = Alignment.CenterEnd,
+                    navController = navController
+                )
+            }
         }
     }
 }
@@ -206,10 +217,21 @@ fun CardServico(
     imagem: Int,
     modifier: Modifier = Modifier,
     tamanhoImagem: Dp = 100.dp,
-    imgAlign: Alignment = Alignment.CenterEnd
+    imgAlign: Alignment = Alignment.CenterEnd,
+    navController: NavController
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable {
+            // Navegar para a tela de criar serviço da categoria selecionada
+            // Normalizar o nome da categoria para a navegação
+            val categoriaNome = when (titulo) {
+                "Farmacia" -> "Farmácia"
+                "Correios" -> "Correio"
+                "Monte o seu serviço" -> return@clickable // Não navega nesse caso
+                else -> titulo
+            }
+            navController.navigate("tela_servico_categoria/$categoriaNome")
+        },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cor),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
@@ -221,7 +243,7 @@ fun CardServico(
                     .fillMaxSize()
                     .padding(10.dp),
                 verticalArrangement = Arrangement.SpaceBetween
-            )  {
+            ) {
                 // título em cima
                 Text(
                     text = titulo,
@@ -231,10 +253,16 @@ fun CardServico(
                     modifier = Modifier.padding(top = 12.dp)
                 )
 
-
                 Button(
                     onClick = {
                         // ação ao clicar, ex: navegar para outra tela
+                        val categoriaNome = when (titulo) {
+                            "Farmacia" -> "Farmácia"
+                            "Correios" -> "Correio"
+                            "Monte o seu serviço" -> return@Button
+                            else -> titulo
+                        }
+                        navController.navigate("tela_servico_categoria/$categoriaNome")
                     },
                     shape = RoundedCornerShape(32.dp),
                     colors = ButtonDefaults.buttonColors(

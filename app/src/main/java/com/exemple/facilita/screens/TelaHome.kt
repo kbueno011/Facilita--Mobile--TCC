@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import com.exemple.facilita.R
 import com.exemple.facilita.components.BottomNavBar
+import com.exemple.facilita.components.IconeNotificacao
 import com.exemple.facilita.utils.TokenManager
 
 @Composable
@@ -61,20 +62,7 @@ fun TelaHome(navController: NavController) {
                         color = Color(0xFF2D2D2D)
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFD5D4D4)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notificação",
-                        tint = Color(0xFF019D31),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                IconeNotificacao(navController = navController)
             }
 
             Spacer(modifier = Modifier.height(18.dp))

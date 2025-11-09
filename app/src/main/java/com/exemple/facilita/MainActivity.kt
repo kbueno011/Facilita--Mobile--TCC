@@ -140,6 +140,10 @@ fun AppNavHost(navController: NavHostController) {
             TelaAjudaSuporte(navController)
         }
 
+        composable("tela_notificacoes") {
+            TelaNotificacoes(navController)
+        }
+
 
     }
 }
