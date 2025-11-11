@@ -1,0 +1,8 @@
+// ESTE ARQUIVO FOI SUBSTITUÍDO POR TelaCarteira.kt
+// Mantido apenas como backup
+// NÃO USE ESTE ARQUIVO
+
+package com.exemple.facilita.screens.backup
+
+// Arquivo de backup - conteúdo movido para TelaCarteira.kt
+

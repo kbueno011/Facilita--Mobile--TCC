@@ -1,6 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Configuração padrão para todos os domínios -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Localhost para desenvolvimento -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+
+    <!-- API Facilita -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">api.facilita.com</domain>
+        <domain includeSubdomains="true">ww25.api.facilita.com</domain>
+    </domain-config>
+
+    <!-- PagBank Sandbox e Produção -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">sandbox.api.pagseguro.com</domain>
+        <domain includeSubdomains="true">api.pagseguro.com</domain>
     </domain-config>
 </network-security-config>

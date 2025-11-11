@@ -1,5 +1,6 @@
 package com.exemple.facilita.screens
 
+import PasswordRequirement
 import android.content.Context
 import android.util.Patterns
 import android.widget.Toast

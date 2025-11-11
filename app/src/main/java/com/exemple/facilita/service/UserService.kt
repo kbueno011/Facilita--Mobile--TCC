@@ -1,7 +1,6 @@
 package com.exemple.facilita.service
 
 import com.exemple.facilita.model.*
-//import com.exemple.facilita.screens.ApiResponse
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body

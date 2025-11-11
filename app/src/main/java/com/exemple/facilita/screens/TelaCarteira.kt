@@ -1,448 +1,297 @@
 package com.exemple.facilita.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.components.BottomNavBar
+import com.exemple.facilita.data.models.*
 import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.viewmodel.CarteiraViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-
-data class Movimentacao(
-    val titulo: String,
-    val subtitulo: String,
-    val valor: String,
-    val data: String,
-    val tipo: TipoMovimentacao
-)
-
-enum class TipoMovimentacao {
-    DEPOSITO, SAQUE, CORRIDA
-}
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaCarteira(navController: NavController) {
     val context = LocalContext.current
+    val viewModel: CarteiraViewModel = viewModel()
+
+    val saldo by viewModel.saldo.collectAsState()
+    val transacoes by viewModel.transacoes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
     var mostrarSaldo by remember { mutableStateOf(true) }
     var mostrarDialogDepositar by remember { mutableStateOf(false) }
     var mostrarDialogSacar by remember { mutableStateOf(false) }
+    var mostrarDialogContaBancaria by remember { mutableStateOf(false) }
 
-    val saldo = "R$ 1.250,00"
     val nomeUsuario = TokenManager.obterNomeUsuario(context) ?: "Usuário"
+    val token = TokenManager.obterToken(context) ?: ""
 
-    // Animação de entrada
+    val contasBancarias by viewModel.contasBancarias.collectAsState()
+
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        visible = true
-    }
-
-    val movimentacoes = listOf(
-        Movimentacao(
-            titulo = "Corrida - Centro ao Bairro Sul",
-            subtitulo = "Entregador: João Silva",
-            valor = "- R$ 25,50",
-            data = "Hoje, 14:30",
-            tipo = TipoMovimentacao.CORRIDA
-        ),
-        Movimentacao(
-            titulo = "Depósito via PIX",
-            subtitulo = "Recarga de saldo",
-            valor = "+ R$ 500,00",
-            data = "Hoje, 10:15",
-            tipo = TipoMovimentacao.DEPOSITO
-        ),
-        Movimentacao(
-            titulo = "Corrida - Shopping ao Centro",
-            subtitulo = "Entregador: Maria Santos",
-            valor = "- R$ 18,00",
-            data = "Ontem, 16:45",
-            tipo = TipoMovimentacao.CORRIDA
-        ),
-        Movimentacao(
-            titulo = "Saque",
-            subtitulo = "Transferência para conta bancária",
-            valor = "- R$ 200,00",
-            data = "18 Nov, 09:00",
-            tipo = TipoMovimentacao.SAQUE
-        ),
-        Movimentacao(
-            titulo = "Corrida - Farmácia Express",
-            subtitulo = "Entregador: Pedro Lima",
-            valor = "- R$ 15,00",
-            data = "17 Nov, 20:30",
-            tipo = TipoMovimentacao.CORRIDA
-        ),
-        Movimentacao(
-            titulo = "Depósito via Boleto",
-            subtitulo = "Recarga de saldo",
-            valor = "+ R$ 300,00",
-            data = "15 Nov, 11:20",
-            tipo = TipoMovimentacao.DEPOSITO
-        )
-    )
+    LaunchedEffect(Unit) { visible = true }
 
     Scaffold(
         bottomBar = { BottomNavBar(navController) }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Header com gradiente e animação
+        Box(Modifier.fillMaxSize().padding(innerPadding)) {
+            LazyColumn(Modifier.fillMaxSize()) {
                 item {
-                    AnimatedHeader(
+                    HeaderCarteira(
                         nomeUsuario = nomeUsuario,
                         saldo = saldo,
                         mostrarSaldo = mostrarSaldo,
                         onToggleSaldo = { mostrarSaldo = !mostrarSaldo },
-                        visible = visible
+                        visible = visible,
+                        onAdicionarContaClick = { mostrarDialogContaBancaria = true }
                     )
                 }
 
-                // Botões de ação - apenas Depositar e Sacar
                 item {
-                    AnimatedActionButtons(
+                    BotoesAcao(
                         visible = visible,
                         onDepositarClick = { mostrarDialogDepositar = true },
                         onSacarClick = { mostrarDialogSacar = true }
                     )
                 }
 
-                // Título Movimentações
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .background(Color(0xFFF4F4F4))
-                            .padding(vertical = 16.dp)
+                            .padding(vertical = 16.dp, horizontal = 20.dp)
                     ) {
                         Text(
-                            text = "Histórico de Movimentações",
+                            "Histórico de Movimentações",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.align(Alignment.Center),
                             color = Color(0xFF2D2D2D)
                         )
                     }
                 }
 
-                // Lista de movimentações com animação
-                itemsIndexed(movimentacoes) { index, mov ->
-                    AnimatedMovimentacaoItem(
-                        mov = mov,
-                        index = index,
-                        visible = visible
-                    )
+                items(transacoes) { transacao ->
+                    ItemTransacao(transacao, visible)
                 }
 
-                // Espaço no final
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                if (transacoes.isEmpty()) {
+                    item {
+                        Box(
+                            Modifier.fillMaxWidth().padding(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.AccountBalanceWallet,
+                                    null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = Color(0xFF6D6D6D).copy(alpha = 0.5f)
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    "Nenhuma movimentação ainda",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color(0xFF6D6D6D)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item { Spacer(Modifier.height(16.dp)) }
+            }
+
+            if (isLoading) {
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF00B14F))
                 }
             }
         }
     }
 
-    // Diálogos
     if (mostrarDialogDepositar) {
-        DialogDepositar(
-            onDismiss = { mostrarDialogDepositar = false },
-            onConfirm = { valor ->
-                // TODO: Implementar lógica de depósito
-                mostrarDialogDepositar = false
-            }
+        DialogDepositoSimplificado(
+            viewModel = viewModel,
+            token = token,
+            onDismiss = { mostrarDialogDepositar = false }
         )
     }
 
     if (mostrarDialogSacar) {
-        DialogSacar(
-            onDismiss = { mostrarDialogSacar = false },
-            onConfirm = { valor ->
-                // TODO: Implementar lógica de saque
-                mostrarDialogSacar = false
-            },
-            saldoDisponivel = saldo
+        DialogSaqueSimplificado(
+            viewModel = viewModel,
+            token = token,
+            saldoDisponivel = saldo.saldoDisponivel,
+            contasBancarias = contasBancarias,
+            onDismiss = { mostrarDialogSacar = false }
+        )
+    }
+
+    if (mostrarDialogContaBancaria) {
+        DialogAdicionarContaBancaria(
+            viewModel = viewModel,
+            onDismiss = { mostrarDialogContaBancaria = false }
         )
     }
 }
 
-// Componente de Header Animado
 @Composable
-private fun AnimatedHeader(
+private fun HeaderCarteira(
     nomeUsuario: String,
-    saldo: String,
+    saldo: SaldoCarteira,
     mostrarSaldo: Boolean,
     onToggleSaldo: () -> Unit,
-    visible: Boolean
+    visible: Boolean,
+    onAdicionarContaClick: () -> Unit
 ) {
-    // Animações
-    val slideOffset by animateIntAsState(
-        targetValue = if (visible) 0 else -100,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        )
-    )
-
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 800)
+        animationSpec = tween(durationMillis = 800), label = ""
     )
 
-    // Animação do card de saldo
-    val cardScale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.8f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        )
-    )
+    var mostrarMenu by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(230.dp)
-            .background(
-                brush = Brush.horizontalGradient(
-                    listOf(Color(0xFF3C604B), Color(0xFF00B14F))
-                )
-            )
+        Modifier.fillMaxWidth().height(230.dp)
+            .background(Brush.horizontalGradient(listOf(Color(0xFF3C604B), Color(0xFF00B14F))))
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .alpha(alpha)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar com avatar
+        Column(Modifier.fillMaxSize()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Avatar com animação de rotação
-                var rotation by remember { mutableStateOf(0f) }
-                LaunchedEffect(Unit) {
-                    rotation = 360f
-                }
-                val animatedRotation by animateFloatAsState(
-                    targetValue = rotation,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessVeryLow
-                    )
-                )
-
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .rotate(animatedRotation)
-                        .clip(CircleShape)
+                    Modifier.size(48.dp).clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = nomeUsuario.take(2).uppercase(),
+                        nomeUsuario.take(2).uppercase(),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        modifier = Modifier.rotate(-animatedRotation)
+                        fontSize = 16.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(Modifier.width(12.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Olá,",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        text = nomeUsuario,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                Column(Modifier.weight(1f)) {
+                    Text("Olá,", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+                    Text(nomeUsuario, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // Ícone de notificação com badge animado
-                var badgeVisible by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    delay(500)
-                    badgeVisible = true
+                IconButton(onClick = {}) {
+                    Icon(Icons.Default.Notifications, "Notificações", tint = Color.White)
                 }
 
                 Box {
-                    IconButton(onClick = { /* notificações */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notificações",
-                            tint = Color.White
-                        )
+                    IconButton(onClick = { mostrarMenu = true }) {
+                        Icon(Icons.Default.MoreVert, "Menu", tint = Color.White)
                     }
-                    // Badge animado
-                    if (badgeVisible) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color.Red)
+
+                    DropdownMenu(
+                        expanded = mostrarMenu,
+                        onDismissRequest = { mostrarMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Adicionar Conta Bancária") },
+                            onClick = {
+                                mostrarMenu = false
+                                onAdicionarContaClick()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.AccountBalance,
+                                    contentDescription = null,
+                                    tint = Color(0xFF00B14F)
+                                )
+                            }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
 
-            // Card de saldo com animação
             Card(
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.15f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .scale(cardScale)
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth().height(80.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp)
-                ) {
+                Box(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Column {
+                            Text("Saldo Disponível", color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
+                            Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Saldo Disponível",
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 13.sp
+                                text = if (mostrarSaldo) currencyFormat.format(saldo.saldoDisponivel) else "R$ ••••••",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            AnimatedVisibility(
-                                visible = mostrarSaldo,
-                                enter = fadeIn() + slideInVertically(),
-                                exit = fadeOut() + slideOutVertically()
-                            ) {
-                                Text(
-                                    text = saldo,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 24.sp
-                                )
-                            }
-                            AnimatedVisibility(
-                                visible = !mostrarSaldo,
-                                enter = fadeIn() + slideInVertically(),
-                                exit = fadeOut() + slideOutVertically()
-                            ) {
-                                Text(
-                                    text = "R$ ••••••",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 24.sp
-                                )
-                            }
                         }
 
-                        // Botão de toggle com rotação
-                        var iconRotation by remember { mutableStateOf(0f) }
-                        val animatedIconRotation by animateFloatAsState(
-                            targetValue = iconRotation,
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                        )
-
-                        IconButton(
-                            onClick = {
-                                iconRotation += 180f
-                                onToggleSaldo()
-                            },
-                            modifier = Modifier.size(40.dp)
-                        ) {
+                        IconButton(onClick = onToggleSaldo, modifier = Modifier.size(40.dp)) {
                             Icon(
-                                imageVector = if (mostrarSaldo)
-                                    Icons.Default.Visibility
-                                else
-                                    Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar/ocultar",
+                                if (mostrarSaldo) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                "Mostrar/ocultar",
                                 tint = Color.White,
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .rotate(animatedIconRotation)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Texto informativo com animação
-            var textVisible by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                delay(600)
-                textVisible = true
-            }
-
-            if (textVisible) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "💳 Use seu saldo para pagar corridas",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 12.sp
-                    )
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Text("💳 Use seu saldo para pagar corridas", color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp)
             }
         }
     }
 }
 
-// Componente de Botões de Ação Animados
 @Composable
-private fun AnimatedActionButtons(
+private fun BotoesAcao(
     visible: Boolean,
     onDepositarClick: () -> Unit,
     onSacarClick: () -> Unit
@@ -456,285 +305,959 @@ private fun AnimatedActionButtons(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .background(Color(0xFFF4F4F4))
             .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Botão Depositar
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AnimatedVisibility(
                 visible = buttonsVisible,
-                enter = fadeIn(animationSpec = tween(600)) +
-                        slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                        ),
+                enter = fadeIn() + slideInVertically(),
                 modifier = Modifier.weight(1f)
             ) {
-                ActionButton(
-                    text = "Depositar",
-                    icon = Icons.Default.Add,
-                    backgroundColor = Color(0xFF00B14F),
-                    onClick = onDepositarClick
-                )
+                BotaoAcao("Depositar", Icons.Default.Add, Color(0xFF00B14F), onDepositarClick)
             }
 
-            // Botão Sacar
             AnimatedVisibility(
                 visible = buttonsVisible,
-                enter = fadeIn(animationSpec = tween(600, delayMillis = 150)) +
-                        slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                        ),
+                enter = fadeIn() + slideInVertically(),
                 modifier = Modifier.weight(1f)
             ) {
-                ActionButton(
-                    text = "Sacar",
-                    icon = Icons.AutoMirrored.Filled.TrendingDown,
-                    backgroundColor = Color(0xFF3C604B),
-                    onClick = onSacarClick
-                )
+                BotaoAcao("Sacar", Icons.AutoMirrored.Filled.TrendingDown, Color(0xFF3C604B), onSacarClick)
             }
         }
     }
 }
 
-// Botão de Ação Individual
 @Composable
-private fun ActionButton(
+private fun BotaoAcao(
     text: String,
     icon: ImageVector,
     backgroundColor: Color,
     onClick: () -> Unit
 ) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-    )
-
-    // Animação de pulse no ícone
-    val infiniteTransition = rememberInfiniteTransition()
-    val iconScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
-
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (pressed) 2.dp else 6.dp
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .scale(scale)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        pressed = true
-                        try {
-                            awaitRelease()
-                        } finally {
-                            pressed = false
-                        }
-                    },
-                    onTap = { onClick() }
-                )
-            }
+        modifier = Modifier.fillMaxWidth().height(100.dp).clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .scale(iconScale)
-                    .clip(CircleShape)
+                Modifier.size(48.dp).clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = text,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = Color.White
-            )
+            Spacer(Modifier.height(8.dp))
+            Text(text, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
         }
     }
 }
 
-// Item de Movimentação Animado
 @Composable
-private fun AnimatedMovimentacaoItem(
-    mov: Movimentacao,
-    index: Int,
-    visible: Boolean
-) {
+private fun ItemTransacao(transacao: TransacaoCarteira, visible: Boolean) {
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
     var itemVisible by remember { mutableStateOf(false) }
     LaunchedEffect(visible) {
         if (visible) {
-            delay((index * 100).toLong())
+            delay(100)
             itemVisible = true
         }
     }
 
     AnimatedVisibility(
         visible = itemVisible,
-        enter = fadeIn(animationSpec = tween(500)) +
-                slideInVertically(
-                    initialOffsetY = { it / 2 },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                )
+        enter = fadeIn() + slideInVertically()
     ) {
-        MovimentacaoItem(mov)
+        Box(
+            Modifier.fillMaxWidth()
+                .background(Color(0xFFF4F4F4))
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+        ) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val iconColor = when (transacao.tipo) {
+                        TipoTransacao.DEPOSITO -> Color(0xFF00B14F)
+                        TipoTransacao.SAQUE -> Color(0xFFFF6B6B)
+                        TipoTransacao.PAGAMENTO_SERVICO -> Color(0xFF3C604B)
+                        TipoTransacao.RECEBIMENTO -> Color(0xFF4CAF50)
+                        TipoTransacao.CASHBACK -> Color(0xFFFFB300)
+                        TipoTransacao.ESTORNO -> Color(0xFF2196F3)
+                    }
+
+                    Box(
+                        Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
+                            .background(iconColor.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            when (transacao.tipo) {
+                                TipoTransacao.DEPOSITO -> Icons.Default.Add
+                                TipoTransacao.SAQUE -> Icons.AutoMirrored.Filled.TrendingDown
+                                TipoTransacao.PAGAMENTO_SERVICO -> Icons.Default.ShoppingCart
+                                TipoTransacao.RECEBIMENTO -> Icons.AutoMirrored.Filled.TrendingUp
+                                TipoTransacao.CASHBACK -> Icons.Default.CardGiftcard
+                                TipoTransacao.ESTORNO -> Icons.Default.Refresh
+                            },
+                            null,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            transacao.descricao,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color(0xFF2D2D2D),
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(transacao.data, fontSize = 10.sp, color = Color(0xFF6D6D6D))
+                    }
+
+                    Text(
+                        if (transacao.valor >= 0) "+ ${currencyFormat.format(transacao.valor)}"
+                        else "- ${currencyFormat.format(kotlin.math.abs(transacao.valor))}",
+                        color = if (transacao.valor >= 0) Color(0xFF00B14F) else Color(0xFFFF6B6B),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MovimentacaoItem(mov: Movimentacao) {
-    var pressed by remember { mutableStateOf(false) }
+private fun DialogDepositoSimplificado(
+    viewModel: CarteiraViewModel,
+    token: String,
+    onDismiss: () -> Unit
+) {
+    var valor by remember { mutableStateOf("") }
+    var showAnimation by remember { mutableStateOf(false) }
+    var metodoPagamento by remember { mutableStateOf<String?>(null) }
+    var mostrarFormularioCartao by remember { mutableStateOf(false) }
+
+    // Dados do cartão
+    var numeroCartao by remember { mutableStateOf("") }
+    var nomeCompleto by remember { mutableStateOf("") }
+    var mesExpiracao by remember { mutableStateOf("") }
+    var anoExpiracao by remember { mutableStateOf("") }
+    var cvv by remember { mutableStateOf("") }
+
+    var mensagemErro by remember { mutableStateOf<String?>(null) }
+    var mensagemSucesso by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { showAnimation = true }
+
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+        targetValue = if (showAnimation) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = ""
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF4F4F4))
-            .padding(horizontal = 20.dp, vertical = 6.dp)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.scale(scale)
     ) {
         Card(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                Modifier.padding(24.dp).verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                when {
+                    mensagemSucesso -> {
+                        // Tela de sucesso
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            null,
+                            tint = Color(0xFF00B14F),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text("Depósito Realizado!", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Seu saldo foi atualizado", fontSize = 14.sp, color = Color(0xFF6D6D6D))
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B14F))
+                        ) {
+                            Text("Concluir")
+                        }
+                    }
+
+                    mostrarFormularioCartao -> {
+                        // Formulário do cartão
+                        Text("Dados do Cartão", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = numeroCartao,
+                            onValueChange = { if (it.length <= 19) numeroCartao = formatarNumeroCartao(it) },
+                            label = { Text("Número do Cartão") },
+                            placeholder = { Text("0000 0000 0000 0000") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = nomeCompleto,
+                            onValueChange = { nomeCompleto = it.uppercase() },
+                            label = { Text("Nome no Cartão") },
+                            placeholder = { Text("NOME COMPLETO") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = mesExpiracao,
+                                onValueChange = { if (it.length <= 2) mesExpiracao = it },
+                                label = { Text("Mês") },
+                                placeholder = { Text("MM") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            OutlinedTextField(
+                                value = anoExpiracao,
+                                onValueChange = { if (it.length <= 2) anoExpiracao = it },
+                                label = { Text("Ano") },
+                                placeholder = { Text("AA") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            OutlinedTextField(
+                                value = cvv,
+                                onValueChange = { if (it.length <= 4) cvv = it },
+                                label = { Text("CVV") },
+                                placeholder = { Text("123") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        mensagemErro?.let {
+                            Spacer(Modifier.height(8.dp))
+                            Text(it, color = Color.Red, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { mostrarFormularioCartao = false },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Voltar")
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (validarDadosCartao(numeroCartao, nomeCompleto, mesExpiracao, anoExpiracao, cvv)) {
+                                        viewModel.depositarViaCartao(
+                                            token = token,
+                                            valor = valor.replace(",", ".").toDoubleOrNull() ?: 0.0,
+                                            numeroCartao = numeroCartao.replace(" ", ""),
+                                            mesExpiracao = mesExpiracao,
+                                            anoExpiracao = anoExpiracao,
+                                            cvv = cvv,
+                                            nomeCompleto = nomeCompleto,
+                                            onSuccess = {
+                                                mensagemSucesso = true
+                                            },
+                                            onError = { erro ->
+                                                mensagemErro = erro
+                                            }
+                                        )
+                                    } else {
+                                        mensagemErro = "Preencha todos os campos corretamente"
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B14F))
+                            ) {
+                                Text("Pagar")
+                            }
+                        }
+                    }
+
+                    metodoPagamento != null -> {
+                        // PIX selecionado - Mostra QR Code
+                        if (metodoPagamento == "PIX") {
+                            val pixQrCode by viewModel.pixQrCode.collectAsState()
+                            val pixQrCodeBase64 by viewModel.pixQrCodeBase64.collectAsState()
+
+                            if (pixQrCode != null) {
+                                // QR Code gerado com sucesso
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Pagar com PIX", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        "R$ ${valor.replace(".", ",")}",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF00B14F)
+                                    )
+
+                                    Spacer(Modifier.height(16.dp))
+
+                                    // QR Code
+                                    Card(
+                                        modifier = Modifier.size(200.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                                        elevation = CardDefaults.cardElevation(4.dp)
+                                    ) {
+                                        Box(
+                                            Modifier.fillMaxSize().padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.QrCode2,
+                                                contentDescription = "QR Code",
+                                                modifier = Modifier.size(160.dp),
+                                                tint = Color(0xFF2D2D2D)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(16.dp))
+
+                                    Text(
+                                        "Escaneie o QR Code com o app do seu banco",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF6D6D6D),
+                                        textAlign = TextAlign.Center
+                                    )
+
+                                    Spacer(Modifier.height(12.dp))
+
+                                    // Código PIX
+                                    OutlinedCard(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                                    ) {
+                                        Column(Modifier.padding(12.dp)) {
+                                            Text(
+                                                "Código PIX:",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF6D6D6D)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                pixQrCode!!.take(40) + "...",
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF2D2D2D),
+                                                maxLines = 2
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(12.dp))
+
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                metodoPagamento = null
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Voltar")
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                // Confirmar pagamento PIX - Atualizar saldo e adicionar transação
+                                                val valorDouble = valor.replace(",", ".").toDoubleOrNull() ?: 0.0
+                                                viewModel.confirmarPagamentoPix(valorDouble)
+                                                mensagemSucesso = true
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFF00B14F)
+                                            )
+                                        ) {
+                                            Text("Já Paguei")
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Aguardando QR Code
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Gerando QR Code PIX...", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.height(16.dp))
+                                    CircularProgressIndicator(color = Color(0xFF00B14F))
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        "Aguarde alguns instantes",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF6D6D6D)
+                                    )
+
+                                    LaunchedEffect(Unit) {
+                                        viewModel.depositarViaPix(
+                                            token = token,
+                                            valor = valor.replace(",", ".").toDoubleOrNull() ?: 0.0,
+                                            onSuccess = {
+                                                // QR Code gerado
+                                            },
+                                            onError = { erro ->
+                                                mensagemErro = erro
+                                                metodoPagamento = null
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    else -> {
+                        // Tela inicial
+                        Box(
+                            Modifier.size(70.dp).clip(CircleShape)
+                                .background(Color(0xFF00B14F).copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Add, null, tint = Color(0xFF00B14F), modifier = Modifier.size(36.dp))
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Text("Depositar Saldo", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            "Digite o valor e escolha o método",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6D6D6D),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        OutlinedTextField(
+                            value = valor,
+                            onValueChange = {
+                                if (it.isEmpty() || it.matches(Regex("^\\d*[.,]?\\d{0,2}\$"))) {
+                                    valor = it
+                                }
+                            },
+                            label = { Text("Valor") },
+                            placeholder = { Text("0,00") },
+                            leadingIcon = {
+                                Text("R$", fontWeight = FontWeight.Bold, color = Color(0xFF00B14F), fontSize = 16.sp)
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF00B14F),
+                                focusedLabelColor = Color(0xFF00B14F)
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Botões de método de pagamento
+                        Text("Escolha o método:", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // PIX
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                if (valor.isNotEmpty() && (valor.toDoubleOrNull() ?: 0.0) > 0) {
+                                    metodoPagamento = "PIX"
+                                }
+                            },
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF00B14F).copy(alpha = 0.1f))
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.QrCode2, null, tint = Color(0xFF00B14F))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("PIX", fontWeight = FontWeight.Bold)
+                                    Text("Instantâneo", fontSize = 12.sp, color = Color(0xFF6D6D6D))
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Cartão de Crédito
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                if (valor.isNotEmpty() && (valor.toDoubleOrNull() ?: 0.0) > 0) {
+                                    mostrarFormularioCartao = true
+                                }
+                            },
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF2196F3).copy(alpha = 0.1f))
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CreditCard, null, tint = Color(0xFF2196F3))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("Cartão de Crédito", fontWeight = FontWeight.Bold)
+                                    Text("Aprovação imediata", fontSize = 12.sp, color = Color(0xFF6D6D6D))
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancelar")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatarNumeroCartao(input: String): String {
+    val digitos = input.replace(" ", "")
+    return digitos.chunked(4).joinToString(" ")
+}
+
+private fun validarDadosCartao(
+    numero: String,
+    nome: String,
+    mes: String,
+    ano: String,
+    cvv: String
+): Boolean {
+    return numero.replace(" ", "").length >= 13 &&
+            nome.length >= 3 &&
+            mes.toIntOrNull() in 1..12 &&
+            ano.length == 2 &&
+            cvv.length >= 3
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DialogAdicionarContaBancaria(
+    viewModel: CarteiraViewModel,
+    onDismiss: () -> Unit
+) {
+    var banco by remember { mutableStateOf("") }
+    var agencia by remember { mutableStateOf("") }
+    var conta by remember { mutableStateOf("") }
+    var tipoConta by remember { mutableStateOf("CORRENTE") }
+    var nomeCompleto by remember { mutableStateOf("") }
+    var cpf by remember { mutableStateOf("") }
+    var isPrincipal by remember { mutableStateOf(false) }
+    var showAnimation by remember { mutableStateOf(false) }
+    var mensagemErro by remember { mutableStateOf<String?>(null) }
+    var mensagemSucesso by remember { mutableStateOf(false) }
+    var mostrarSeletorBanco by remember { mutableStateOf(false) }
+    var mostrarSeletorTipoConta by remember { mutableStateOf(false) }
+
+    val bancosPredefinidos = listOf(
+        "Banco do Brasil",
+        "Caixa Econômica Federal",
+        "Bradesco",
+        "Itaú",
+        "Santander",
+        "Nubank",
+        "Inter",
+        "C6 Bank",
+        "BTG Pactual",
+        "Banco Original",
+        "Outro"
+    )
+
+    LaunchedEffect(Unit) { showAnimation = true }
+
+    val scale by animateFloatAsState(
+        targetValue = if (showAnimation) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = ""
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.scale(scale)
+    ) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(2.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .scale(scale)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            pressed = true
-                            try {
-                                awaitRelease()
-                            } finally {
-                                pressed = false
-                            }
-                        },
-                        onTap = { /* detalhes */ }
-                    )
-                }
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                Modifier.padding(24.dp).verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Ícone da movimentação com animação
-                val iconColor = when (mov.tipo) {
-                    TipoMovimentacao.DEPOSITO -> Color(0xFF00B14F)
-                    TipoMovimentacao.SAQUE -> Color(0xFFFF6B6B)
-                    TipoMovimentacao.CORRIDA -> Color(0xFF3C604B)
-                }
+                when {
+                    mensagemSucesso -> {
+                        // Tela de sucesso
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            null,
+                            tint = Color(0xFF00B14F),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text("Conta Adicionada!", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Sua conta bancária foi cadastrada com sucesso",
+                            fontSize = 14.sp,
+                            color = Color(0xFF6D6D6D),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B14F))
+                        ) {
+                            Text("Concluir")
+                        }
+                    }
 
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(iconColor.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = when (mov.tipo) {
-                            TipoMovimentacao.DEPOSITO -> Icons.Default.Add
-                            TipoMovimentacao.SAQUE -> Icons.AutoMirrored.Filled.TrendingDown
-                            TipoMovimentacao.CORRIDA -> Icons.Default.DirectionsCar
-                        },
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                    else -> {
+                        Box(
+                            Modifier.size(70.dp).clip(CircleShape)
+                                .background(Color(0xFF00B14F).copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.AccountBalance,
+                                null,
+                                tint = Color(0xFF00B14F),
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = mov.titulo,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color(0xFF2D2D2D),
-                        maxLines = 1
-                    )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = mov.subtitulo,
-                        fontSize = 11.sp,
-                        color = Color(0xFF6D6D6D),
-                        maxLines = 1
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = mov.valor,
-                        color = if (mov.valor.startsWith("+")) Color(0xFF00B14F) else Color(0xFFFF6B6B),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
+                        Text("Adicionar Conta Bancária", fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = mov.data,
-                        fontSize = 11.sp,
-                        color = Color(0xFF6D6D6D)
-                    )
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            "Cadastre uma conta para realizar saques",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6D6D6D),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // Seletor de Banco
+                        Text(
+                            "Banco",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2D2D2D),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(4.dp))
+
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth().clickable { mostrarSeletorBanco = true },
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.AccountBalance,
+                                    null,
+                                    tint = Color(0xFF00B14F)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    banco.ifEmpty { "Selecione o banco" },
+                                    modifier = Modifier.weight(1f),
+                                    color = if (banco.isEmpty()) Color(0xFF6D6D6D) else Color(0xFF2D2D2D)
+                                )
+                                Icon(Icons.Default.KeyboardArrowDown, null, tint = Color(0xFF6D6D6D))
+                            }
+                        }
+
+                        if (mostrarSeletorBanco) {
+                            AlertDialog(
+                                onDismissRequest = { mostrarSeletorBanco = false }
+                            ) {
+                                Card(shape = RoundedCornerShape(16.dp)) {
+                                    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                                        Text("Selecione o banco", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(16.dp))
+
+                                        bancosPredefinidos.forEach { bancoItem ->
+                                            OutlinedCard(
+                                                modifier = Modifier.fillMaxWidth().clickable {
+                                                    banco = bancoItem
+                                                    mostrarSeletorBanco = false
+                                                },
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = if (banco == bancoItem)
+                                                        Color(0xFF00B14F).copy(alpha = 0.1f)
+                                                    else Color.White
+                                                )
+                                            ) {
+                                                Row(
+                                                    Modifier.padding(12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Default.AccountBalance, null, tint = Color(0xFF00B14F))
+                                                    Spacer(Modifier.width(12.dp))
+                                                    Text(bancoItem, fontWeight = FontWeight.Medium)
+                                                }
+                                            }
+                                            Spacer(Modifier.height(8.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Agência
+                        OutlinedTextField(
+                            value = agencia,
+                            onValueChange = { if (it.length <= 6) agencia = it },
+                            label = { Text("Agência") },
+                            placeholder = { Text("0001") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Tipo de Conta e Número
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Tipo de Conta
+                            Column(Modifier.weight(1f)) {
+                                Text("Tipo", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                OutlinedCard(
+                                    modifier = Modifier.fillMaxWidth().clickable { mostrarSeletorTipoConta = true },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            if (tipoConta == "CORRENTE") "Corrente" else "Poupança",
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+
+                                if (mostrarSeletorTipoConta) {
+                                    AlertDialog(onDismissRequest = { mostrarSeletorTipoConta = false }) {
+                                        Card {
+                                            Column(Modifier.padding(16.dp)) {
+                                                Text("Tipo de conta", fontWeight = FontWeight.Bold)
+                                                Spacer(Modifier.height(12.dp))
+                                                listOf("CORRENTE" to "Corrente", "POUPANCA" to "Poupança").forEach { (valor, nome) ->
+                                                    OutlinedCard(
+                                                        modifier = Modifier.fillMaxWidth().clickable {
+                                                            tipoConta = valor
+                                                            mostrarSeletorTipoConta = false
+                                                        }
+                                                    ) {
+                                                        Text(nome, Modifier.padding(12.dp))
+                                                    }
+                                                    Spacer(Modifier.height(8.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Número da Conta
+                            OutlinedTextField(
+                                value = conta,
+                                onValueChange = { if (it.length <= 15) conta = it },
+                                label = { Text("Conta") },
+                                placeholder = { Text("12345-6") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(2f)
+                            )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Nome Completo
+                        OutlinedTextField(
+                            value = nomeCompleto,
+                            onValueChange = { nomeCompleto = it },
+                            label = { Text("Nome Completo") },
+                            placeholder = { Text("Seu nome completo") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // CPF
+                        OutlinedTextField(
+                            value = cpf,
+                            onValueChange = { if (it.length <= 14) cpf = formatarCPF(it) },
+                            label = { Text("CPF") },
+                            placeholder = { Text("000.000.000-00") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Checkbox Conta Principal
+                        Row(
+                            Modifier.fillMaxWidth().clickable { isPrincipal = !isPrincipal },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isPrincipal,
+                                onCheckedChange = { isPrincipal = it },
+                                colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00B14F))
+                            )
+                            Text("Definir como conta principal")
+                        }
+
+                        mensagemErro?.let {
+                            Spacer(Modifier.height(8.dp))
+                            Text(it, color = Color.Red, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Cancelar")
+                            }
+
+                            Button(
+                                onClick = {
+                                    when {
+                                        banco.isEmpty() -> mensagemErro = "Selecione o banco"
+                                        agencia.isEmpty() -> mensagemErro = "Digite a agência"
+                                        conta.isEmpty() -> mensagemErro = "Digite o número da conta"
+                                        nomeCompleto.length < 3 -> mensagemErro = "Digite o nome completo"
+                                        cpf.replace(".", "").replace("-", "").length != 11 ->
+                                            mensagemErro = "CPF inválido"
+                                        else -> {
+                                            viewModel.adicionarContaBancariaLocal(
+                                                banco = banco,
+                                                agencia = agencia,
+                                                conta = conta,
+                                                tipoConta = tipoConta,
+                                                nomeCompleto = nomeCompleto,
+                                                cpf = cpf,
+                                                isPrincipal = isPrincipal
+                                            )
+                                            mensagemSucesso = true
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                enabled = banco.isNotEmpty() && agencia.isNotEmpty() && conta.isNotEmpty(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B14F))
+                            ) {
+                                Text("Adicionar")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// Diálogo de Depositar
+private fun formatarCPF(input: String): String {
+    val digitos = input.replace(".", "").replace("-", "")
+    return buildString {
+        digitos.forEachIndexed { index, char ->
+            append(char)
+            when (index) {
+                2, 5 -> append(".")
+                8 -> append("-")
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DialogDepositar(
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+private fun DialogSaqueSimplificado(
+    viewModel: CarteiraViewModel,
+    token: String,
+    saldoDisponivel: Double,
+    contasBancarias: List<ContaBancaria>,
+    onDismiss: () -> Unit
 ) {
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
     var valor by remember { mutableStateOf("") }
     var showAnimation by remember { mutableStateOf(false) }
+    var mensagemErro by remember { mutableStateOf<String?>(null) }
+    var mensagemSucesso by remember { mutableStateOf(false) }
+    var contaSelecionada by remember { mutableStateOf<ContaBancaria?>(contasBancarias.firstOrNull { it.isPrincipal } ?: contasBancarias.firstOrNull()) }
+    var mostrarSeletorConta by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        showAnimation = true
-    }
+    LaunchedEffect(Unit) { showAnimation = true }
 
     val scale by animateFloatAsState(
         targetValue = if (showAnimation) 1f else 0.8f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = ""
     )
 
     AlertDialog(
@@ -746,275 +1269,300 @@ private fun DialogDepositar(
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                Modifier.padding(24.dp).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Ícone animado
-                val infiniteTransition = rememberInfiniteTransition()
-                val iconScale by infiniteTransition.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 1.2f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(800, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    )
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(70.dp)
-                        .scale(iconScale)
-                        .clip(CircleShape)
-                        .background(Color(0xFF00B14F).copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color(0xFF00B14F),
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Depositar Saldo",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2D2D2D)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Digite o valor que deseja adicionar à sua carteira",
-                    fontSize = 13.sp,
-                    color = Color(0xFF6D6D6D),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = valor,
-                    onValueChange = {
-                        // Aceita apenas números e ponto/vírgula
-                        if (it.isEmpty() || it.matches(Regex("^\\d*[.,]?\\d{0,2}\$"))) {
-                            valor = it
-                        }
-                    },
-                    label = { Text("Valor") },
-                    placeholder = { Text("R$ 0,00") },
-                    leadingIcon = {
+                when {
+                    mensagemSucesso -> {
+                        // Tela de sucesso
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            null,
+                            tint = Color(0xFF00B14F),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text("Saque Solicitado!", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "R$",
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF00B14F)
+                            "O valor será transferido em até 2 dias úteis",
+                            fontSize = 14.sp,
+                            color = Color(0xFF6D6D6D),
+                            textAlign = TextAlign.Center
                         )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF00B14F),
-                        focusedLabelColor = Color(0xFF00B14F)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF6D6D6D)
-                        )
-                    ) {
-                        Text("Cancelar")
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B14F))
+                        ) {
+                            Text("Concluir")
+                        }
                     }
 
-                    Button(
-                        onClick = {
-                            if (valor.isNotEmpty()) {
-                                onConfirm(valor)
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = valor.isNotEmpty(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF00B14F)
+                    else -> {
+                        Box(
+                            Modifier.size(70.dp).clip(CircleShape)
+                                .background(Color(0xFF3C604B).copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.TrendingDown,
+                                null,
+                                tint = Color(0xFF3C604B),
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Text("Sacar Saldo", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            "Saldo disponível: ${currencyFormat.format(saldoDisponivel)}",
+                            fontSize = 14.sp,
+                            color = Color(0xFF00B14F),
+                            fontWeight = FontWeight.Bold
                         )
-                    ) {
-                        Text("Confirmar")
+
+                        Spacer(Modifier.height(20.dp))
+
+                        OutlinedTextField(
+                            value = valor,
+                            onValueChange = {
+                                if (it.isEmpty() || it.matches(Regex("^\\d*[.,]?\\d{0,2}\$"))) {
+                                    valor = it
+                                    mensagemErro = null
+                                }
+                            },
+                            label = { Text("Valor") },
+                            placeholder = { Text("0,00") },
+                            leadingIcon = {
+                                Text("R$", fontWeight = FontWeight.Bold, color = Color(0xFF3C604B), fontSize = 16.sp)
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF3C604B),
+                                focusedLabelColor = Color(0xFF3C604B)
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = mensagemErro != null
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Seletor de Conta Bancária
+                        Text(
+                            "Conta para receber:",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2D2D2D),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        if (contasBancarias.isEmpty()) {
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD))
+                            ) {
+                                Row(
+                                    Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Warning,
+                                        null,
+                                        tint = Color(0xFFFF8F00),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Adicione uma conta bancária primeiro",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF856404)
+                                    )
+                                }
+                            }
+                        } else {
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth().clickable { mostrarSeletorConta = true },
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                border = BorderStroke(1.dp, Color(0xFF00B14F))
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        Modifier.size(40.dp).clip(CircleShape)
+                                            .background(Color(0xFF00B14F).copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.AccountBalance,
+                                            null,
+                                            tint = Color(0xFF00B14F),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    Spacer(Modifier.width(12.dp))
+
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            contaSelecionada?.banco ?: "Selecione uma conta",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        if (contaSelecionada != null) {
+                                            Text(
+                                                "Ag: ${contaSelecionada!!.agencia} • Conta: ${contaSelecionada!!.conta}",
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF6D6D6D)
+                                            )
+                                        }
+                                    }
+
+                                    Icon(
+                                        Icons.Default.KeyboardArrowDown,
+                                        null,
+                                        tint = Color(0xFF6D6D6D)
+                                    )
+                                }
+                            }
+
+                            // Dropdown de seleção de conta
+                            if (mostrarSeletorConta) {
+                                AlertDialog(
+                                    onDismissRequest = { mostrarSeletorConta = false }
+                                ) {
+                                    Card(shape = RoundedCornerShape(16.dp)) {
+                                        Column(Modifier.padding(16.dp)) {
+                                            Text(
+                                                "Selecione a conta",
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+
+                                            contasBancarias.forEach { conta ->
+                                                OutlinedCard(
+                                                    modifier = Modifier.fillMaxWidth().clickable {
+                                                        contaSelecionada = conta
+                                                        mostrarSeletorConta = false
+                                                    },
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = if (contaSelecionada?.id == conta.id)
+                                                            Color(0xFF00B14F).copy(alpha = 0.1f)
+                                                        else Color.White
+                                                    )
+                                                ) {
+                                                    Row(
+                                                        Modifier.padding(12.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.AccountBalance,
+                                                            null,
+                                                            tint = Color(0xFF00B14F)
+                                                        )
+                                                        Spacer(Modifier.width(12.dp))
+                                                        Column {
+                                                            Text(
+                                                                conta.banco,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                            Text(
+                                                                "Ag: ${conta.agencia} • Conta: ${conta.conta}",
+                                                                fontSize = 12.sp,
+                                                                color = Color(0xFF6D6D6D)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                Spacer(Modifier.height(8.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        mensagemErro?.let {
+                            Spacer(Modifier.height(8.dp))
+                            Text(it, color = Color.Red, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Text(
+                            "O valor será transferido para a conta selecionada",
+                            fontSize = 12.sp,
+                            color = Color(0xFF6D6D6D),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Cancelar")
+                            }
+
+                            Button(
+                                onClick = {
+                                    val valorDouble = valor.replace(",", ".").toDoubleOrNull() ?: 0.0
+
+                                    when {
+                                        valorDouble <= 0 -> {
+                                            mensagemErro = "Digite um valor válido"
+                                        }
+                                        valorDouble > saldoDisponivel -> {
+                                            mensagemErro = "Saldo insuficiente"
+                                        }
+                                        contasBancarias.isEmpty() -> {
+                                            mensagemErro = "Adicione uma conta bancária primeiro"
+                                        }
+                                        contaSelecionada == null -> {
+                                            mensagemErro = "Selecione uma conta bancária"
+                                        }
+                                        else -> {
+                                            viewModel.sacar(
+                                                token = token,
+                                                valor = valorDouble,
+                                                contaBancariaId = contaSelecionada!!.id,
+                                                onSuccess = {
+                                                    mensagemSucesso = true
+                                                },
+                                                onError = { erro ->
+                                                    mensagemErro = erro
+                                                }
+                                            )
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                enabled = valor.isNotEmpty() && contasBancarias.isNotEmpty(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3C604B))
+                            ) {
+                                Text("Confirmar")
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-
-// Diálogo de Sacar
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DialogSacar(
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-    saldoDisponivel: String
-) {
-    var valor by remember { mutableStateOf("") }
-    var showAnimation by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        showAnimation = true
-    }
-
-    val scale by animateFloatAsState(
-        targetValue = if (showAnimation) 1f else 0.8f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.scale(scale)
-    ) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Ícone animado
-                val infiniteTransition = rememberInfiniteTransition()
-                val iconRotation by infiniteTransition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 10f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(400, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    )
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(70.dp)
-                        .rotate(iconRotation)
-                        .clip(CircleShape)
-                        .background(Color(0xFF3C604B).copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.TrendingDown,
-                        contentDescription = null,
-                        tint = Color(0xFF3C604B),
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Sacar Saldo",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2D2D2D)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Saldo disponível: $saldoDisponivel",
-                    fontSize = 14.sp,
-                    color = Color(0xFF00B14F),
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "O valor será transferido para sua conta bancária",
-                    fontSize = 12.sp,
-                    color = Color(0xFF6D6D6D),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = valor,
-                    onValueChange = {
-                        if (it.isEmpty() || it.matches(Regex("^\\d*[.,]?\\d{0,2}\$"))) {
-                            valor = it
-                        }
-                    },
-                    label = { Text("Valor") },
-                    placeholder = { Text("R$ 0,00") },
-                    leadingIcon = {
-                        Text(
-                            text = "R$",
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF3C604B)
-                        )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3C604B),
-                        focusedLabelColor = Color(0xFF3C604B)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF6D6D6D)
-                        )
-                    ) {
-                        Text("Cancelar")
-                    }
-
-                    Button(
-                        onClick = {
-                            if (valor.isNotEmpty()) {
-                                onConfirm(valor)
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = valor.isNotEmpty(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF3C604B)
-                        )
-                    ) {
-                        Text("Confirmar")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun TelaCarteiraPreview() {
-    val navController = rememberNavController()
-    TelaCarteira(navController)
 }
 
