@@ -1,7 +1,6 @@
 
 package com.exemple.facilita.screens
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,8 +38,13 @@ fun TelaPerfilContratante(
     viewModel: PerfilViewModel = viewModel()
 ) {
     var notificacoesAtivas by remember { mutableStateOf(false) }
-    val usuario by viewModel.usuario.collectAsState() // ✅ usa o novo campo do ViewModel
+    val perfilData by viewModel.perfilData.collectAsState() // ✅ usa os dados do perfil completo
     val context = LocalContext.current
+
+    // Estados para controlar os diálogos de edição
+    var mostrarDialogoNome by remember { mutableStateOf(false) }
+    var mostrarDialogoEmail by remember { mutableStateOf(false) }
+    var mostrarDialogoTelefone by remember { mutableStateOf(false) }
 
     // 🔑 Recupera o token salvo usando TokenManager
     val token = TokenManager.obterToken(context)
@@ -69,7 +73,7 @@ fun TelaPerfilContratante(
 
             // 🖼️ Foto de perfil
             Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.BottomEnd) {
-                val imagemPerfil = usuario?.foto_perfil
+                val imagemPerfil = perfilData?.foto_perfil
                 if (imagemPerfil != null) {
                     Image(
                         painter = rememberAsyncImagePainter(imagemPerfil),
@@ -113,10 +117,37 @@ fun TelaPerfilContratante(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text("Informações do Perfil", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    PerfilInfoItem(Icons.Default.Person, usuario?.nome ?: "Carregando...") {}
-                    PerfilInfoItem(Icons.Default.Email, usuario?.email ?: "--") {}
-                    PerfilInfoItem(Icons.Default.Phone, usuario?.telefone ?: "--") {}
-                    PerfilInfoItem(Icons.Default.DateRange, "Criado em: ${usuario?.criado_em ?: "--"}") {}
+                    PerfilInfoItem(Icons.Default.Person, perfilData?.nome ?: "Carregando...") {
+                        mostrarDialogoNome = true
+                    }
+                    PerfilInfoItem(Icons.Default.Email, perfilData?.email ?: "--") {
+                        mostrarDialogoEmail = true
+                    }
+                    PerfilInfoItem(Icons.Default.Phone, perfilData?.telefone ?: "--") {
+                        mostrarDialogoTelefone = true
+                    }
+
+                    // Localização: cidade / bairro
+                    val cidade = perfilData?.dados_contratante?.localizacao?.cidade
+                    val bairro = perfilData?.dados_contratante?.localizacao?.bairro
+                    val localizacao = when {
+                        cidade != null && bairro != null -> "$cidade / $bairro"
+                        cidade != null -> cidade
+                        bairro != null -> bairro
+                        else -> "--"
+                    }
+                    // Localização sem ícone de editar
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Place, contentDescription = null, tint = Color.Black)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(localizacao, fontSize = 15.sp)
+                        }
+                    }
                 }
             }
 
@@ -186,6 +217,61 @@ fun TelaPerfilContratante(
                 }
             }
         }
+
+        // 📝 Diálogos de Edição
+        if (mostrarDialogoNome) {
+            DialogoEditarTexto(
+                titulo = "Editar Nome",
+                valorAtual = perfilData?.nome ?: "",
+                onDismiss = { mostrarDialogoNome = false },
+                onConfirm = { novoValor ->
+                    token?.let {
+                        viewModel.atualizarNome(
+                            token = "Bearer $it",
+                            novoNome = novoValor,
+                            onSuccess = { mostrarDialogoNome = false },
+                            onError = { erro -> println("❌ $erro") }
+                        )
+                    }
+                }
+            )
+        }
+
+        if (mostrarDialogoEmail) {
+            DialogoEditarTexto(
+                titulo = "Editar Email",
+                valorAtual = perfilData?.email ?: "",
+                onDismiss = { mostrarDialogoEmail = false },
+                onConfirm = { novoValor ->
+                    token?.let {
+                        viewModel.atualizarEmail(
+                            token = "Bearer $it",
+                            novoEmail = novoValor,
+                            onSuccess = { mostrarDialogoEmail = false },
+                            onError = { erro -> println("❌ $erro") }
+                        )
+                    }
+                }
+            )
+        }
+
+        if (mostrarDialogoTelefone) {
+            DialogoEditarTexto(
+                titulo = "Editar Telefone",
+                valorAtual = perfilData?.telefone ?: "",
+                onDismiss = { mostrarDialogoTelefone = false },
+                onConfirm = { novoValor ->
+                    token?.let {
+                        viewModel.atualizarTelefone(
+                            token = "Bearer $it",
+                            novoTelefone = novoValor,
+                            onSuccess = { mostrarDialogoTelefone = false },
+                            onError = { erro -> println("❌ $erro") }
+                        )
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -207,6 +293,44 @@ fun PerfilInfoItem(
         }
         Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.clickable { onEdit() })
     }
+}
+
+// 📝 Diálogo para editar texto simples (Nome, Email, Telefone)
+@Composable
+fun DialogoEditarTexto(
+    titulo: String,
+    valorAtual: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var texto by remember { mutableStateOf(valorAtual) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(titulo) },
+        text = {
+            OutlinedTextField(
+                value = texto,
+                onValueChange = { texto = it },
+                label = { Text("Novo valor") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(texto) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00A651))
+            ) {
+                Text("Salvar", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true, showSystemUi = true)
