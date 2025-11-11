@@ -30,7 +30,9 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.exemple.facilita.R
 import com.exemple.facilita.components.BottomNavBar
-import com.exemple.facilita.utils.TokenManager // Importa o TokenManager
+import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 import com.exemple.facilita.viewmodel.PerfilViewModel
 
 @Composable

@@ -28,8 +28,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import android.util.Log
@@ -38,6 +36,8 @@ import com.exemple.facilita.model.Login
 import com.exemple.facilita.model.LoginResponse
 import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -91,25 +91,25 @@ fun TelaLogin(navController: NavController) {
                     contentDescription = "Logo Facilita",
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .height(100.dp)
-                        .width(130.dp)
-                        .padding(start = 30.dp)
+                        .height(90.sdp())
+                        .width(120.sdp())
+                        .padding(start = 24.sdp())
                 )
                 Image(
                     painter = painterResource(R.drawable.texturalateral),
                     contentDescription = "Textura lateral",
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .height(200.dp)
-                        .width(200.dp)
+                        .height(180.sdp())
+                        .width(180.sdp())
                 )
                 Image(
                     painter = painterResource(R.drawable.icongeladeiralogin),
                     contentDescription = "Ícone da geladeira",
                     modifier = Modifier
-                        .height(350.dp)
-                        .width(300.dp)
-                        .padding(top = 120.dp, start = 30.dp)
+                        .height(320.sdp())
+                        .width(280.sdp())
+                        .padding(top = 110.sdp(), start = 24.sdp())
                 )
             }
 
@@ -120,31 +120,31 @@ fun TelaLogin(navController: NavController) {
                     .weight(4f)
                     .background(
                         color = Color.White,
-                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                        shape = RoundedCornerShape(topStart = 28.sdp(), topEnd = 28.sdp())
                     )
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp),
+                        .padding(20.sdp()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Fazer login",
-                        fontSize = 24.sp,
+                        fontSize = 22.ssp(),
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        modifier = Modifier.padding(bottom = 20.sdp())
                     )
 
                     // Toggle Email/Celular - Moderno com animação
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(28.dp))
+                            .height(50.sdp())
+                            .clip(RoundedCornerShape(25.sdp()))
                             .background(Color(0xFFF5F5F5))
-                            .padding(4.dp),
+                            .padding(3.sdp()),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         // Opção Email
@@ -153,7 +153,7 @@ fun TelaLogin(navController: NavController) {
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .scale(emailScale)
-                                .clip(RoundedCornerShape(24.dp))
+                                .clip(RoundedCornerShape(22.sdp()))
                                 .then(
                                     if (loginType == "email")
                                         Modifier.background(
@@ -178,19 +178,19 @@ fun TelaLogin(navController: NavController) {
                                     imageVector = Icons.Default.Email,
                                     contentDescription = "Email",
                                     tint = if (loginType == "email") Color.White else Color.Gray,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.sdp())
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(7.sdp()))
                                 Text(
                                     text = "Email",
-                                    fontSize = 16.sp,
+                                    fontSize = 15.ssp(),
                                     fontWeight = if (loginType == "email") FontWeight.Bold else FontWeight.Normal,
                                     color = if (loginType == "email") Color.White else Color.Gray
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(7.sdp()))
 
                         // Opção Celular
                         Box(
@@ -198,7 +198,7 @@ fun TelaLogin(navController: NavController) {
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .scale(celularScale)
-                                .clip(RoundedCornerShape(24.dp))
+                                .clip(RoundedCornerShape(22.sdp()))
                                 .then(
                                     if (loginType == "celular")
                                         Modifier.background(
@@ -223,12 +223,12 @@ fun TelaLogin(navController: NavController) {
                                     imageVector = Icons.Default.Phone,
                                     contentDescription = "Celular",
                                     tint = if (loginType == "celular") Color.White else Color.Gray,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.sdp())
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(7.sdp()))
                                 Text(
                                     text = "Celular",
-                                    fontSize = 16.sp,
+                                    fontSize = 15.ssp(),
                                     fontWeight = if (loginType == "celular") FontWeight.Bold else FontWeight.Normal,
                                     color = if (loginType == "celular") Color.White else Color.Gray
                                 )
@@ -236,7 +236,7 @@ fun TelaLogin(navController: NavController) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.sdp()))
 
                     // Campo de Login (Email ou Celular)
                     OutlinedTextField(
@@ -257,7 +257,7 @@ fun TelaLogin(navController: NavController) {
                             keyboardType = if (loginType == "email") KeyboardType.Email else KeyboardType.Phone
                         ),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(11.sdp()),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF019D31),
                             focusedLabelColor = Color(0xFF019D31),
@@ -265,7 +265,7 @@ fun TelaLogin(navController: NavController) {
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.sdp()))
 
                     // Campo Senha
                     OutlinedTextField(
@@ -291,7 +291,7 @@ fun TelaLogin(navController: NavController) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(11.sdp()),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF019D31),
                             focusedLabelColor = Color(0xFF019D31),
@@ -301,16 +301,16 @@ fun TelaLogin(navController: NavController) {
 
                     // Mensagem de erro
                     if (errorMessage != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(7.sdp()))
                         Text(
                             text = errorMessage!!,
                             color = Color.Red,
-                            fontSize = 14.sp,
+                            fontSize = 13.ssp(),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(18.sdp()))
 
                     // Botão Entrar
                     Button(
@@ -366,7 +366,7 @@ fun TelaLogin(navController: NavController) {
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(50.sdp()),
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = PaddingValues(),
@@ -386,12 +386,12 @@ fun TelaLogin(navController: NavController) {
                             if (isLoading) {
                                 CircularProgressIndicator(
                                     color = Color.White,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(22.sdp())
                                 )
                             } else {
                                 Text(
                                     text = "Entrar",
-                                    fontSize = 18.sp,
+                                    fontSize = 17.ssp(),
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
@@ -401,19 +401,19 @@ fun TelaLogin(navController: NavController) {
 
                     // Link Esqueceu a senha
                     if (tentativaSenhaErrada >= 2) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.sdp()))
                         Text(
                             text = "Esqueceu a senha?",
                             color = Color(0xFF019D31),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            fontSize = 14.ssp(),
                             modifier = Modifier.clickable {
                                 navController.navigate("tela_recuperar_senha")
                             }
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.sdp()))
 
                     // Link Cadastro
                     Row(
@@ -422,12 +422,12 @@ fun TelaLogin(navController: NavController) {
                     ) {
                         Text(
                             text = "Não possui uma conta? ",
-                            fontSize = 14.sp,
+                            fontSize = 13.ssp(),
                             color = Color.Gray
                         )
                         Text(
                             text = "Cadastre-se",
-                            fontSize = 14.sp,
+                            fontSize = 13.ssp(),
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF019D31),
                             modifier = Modifier.clickable {

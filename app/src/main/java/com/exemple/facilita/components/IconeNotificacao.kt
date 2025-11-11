@@ -16,11 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.exemple.facilita.viewmodel.NotificacaoViewModel
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 
 /**
  * Ícone de notificação com badge para ser usado na TopBar
@@ -35,7 +35,7 @@ fun IconeNotificacao(
 
     Box(
         modifier = Modifier
-            .size(48.dp)
+            .size(44.sdp())
             .clickable {
                 navController.navigate("tela_notificacoes")
             }
@@ -45,7 +45,7 @@ fun IconeNotificacao(
             contentDescription = "Notificações",
             tint = corIcone,
             modifier = Modifier
-                .size(24.dp)
+                .size(22.sdp())
                 .align(Alignment.Center)
         )
 
@@ -54,15 +54,15 @@ fun IconeNotificacao(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = (-4).dp, y = 8.dp)
-                    .size(18.dp)
+                    .offset(x = (-3).sdp(), y = 7.sdp())
+                    .size(16.sdp())
                     .clip(CircleShape)
                     .background(Color(0xFFFF3B30)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (notificacoesNaoLidas > 9) "9+" else notificacoesNaoLidas.toString(),
-                    fontSize = 9.sp,
+                    fontSize = 8.ssp(),
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )

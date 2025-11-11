@@ -14,24 +14,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.HeadsetMic
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import com.exemple.facilita.R
 import com.exemple.facilita.components.BottomNavBar
+
 import com.exemple.facilita.components.IconeNotificacao
 import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 
 @Composable
 fun TelaHome(navController: NavController) {
@@ -44,7 +47,7 @@ fun TelaHome(navController: NavController) {
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(paddingValues)
-                .padding(18.dp)
+                .padding(16.sdp())
                 .verticalScroll(rememberScrollState())
         ) {
             // Header
@@ -54,10 +57,10 @@ fun TelaHome(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = "Rua Elton Silva, 509", fontSize = 12.sp, color = Color.Gray)
+                    Text(text = "Rua Elton Silva, 509", fontSize = 12.ssp(), color = Color.Gray)
                     Text(
                         text = "Olá, $nomeUsuario",
-                        fontSize = 24.sp,
+                        fontSize = 24.ssp(),
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF2D2D2D)
                     )
@@ -65,34 +68,35 @@ fun TelaHome(navController: NavController) {
                 IconeNotificacao(navController = navController)
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.sdp()))
 
             // Search bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .height(48.sdp())
+                    .clip(RoundedCornerShape(14.sdp()))
                     .background(Color(0xFFF2F2F2))
                     .border(
-                        BorderStroke(1.dp, Color(0x22019D31)),
-                        shape = RoundedCornerShape(14.dp)
+                        BorderStroke(1.sdp(), Color(0x22019D31)),
+                        shape = RoundedCornerShape(14.sdp())
                     )
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 14.sdp()),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Pesquisar",
-                        tint = Color(0xFF019D31)
+                        tint = Color(0xFF019D31),
+                        modifier = Modifier.size(24.sdp())
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = "Solicite seu serviço", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.width(10.sdp()))
+                    Text(text = "Solicite seu serviço", color = Color.Gray, fontSize = 14.ssp())
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.sdp()))
 
             // Monte seu serviço
             var pressedCard by remember { mutableStateOf(false) }
@@ -101,7 +105,7 @@ fun TelaHome(navController: NavController) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(140.sdp())
                     .scale(scaleCard)
                     .pointerInput(Unit) {
                         detectTapGestures(
@@ -116,9 +120,9 @@ fun TelaHome(navController: NavController) {
                             }
                         )
                     },
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.sdp()),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                elevation = CardDefaults.cardElevation(6.dp)
+                elevation = CardDefaults.cardElevation(6.sdp())
             ) {
                 Box(
                     modifier = Modifier
@@ -127,9 +131,9 @@ fun TelaHome(navController: NavController) {
                             Brush.horizontalGradient(
                                 listOf(Color(0xFF246537), Color(0xFF699D78))
                             ),
-                            shape = RoundedCornerShape(24.dp)
+                            shape = RoundedCornerShape(20.sdp())
                         )
-                        .padding(20.dp)
+                        .padding(18.sdp())
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
@@ -144,57 +148,62 @@ fun TelaHome(navController: NavController) {
                                 text = "Monte o seu serviço",
                                 color = Color.White,
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 20.sp
+                                fontSize = 18.ssp()
                             )
 
                             Button(
                                 onClick = { navController.navigate("tela_endereco") },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFFFFF)),
                                 shape = RoundedCornerShape(50),
-                                modifier = Modifier.height(36.dp)
+                                modifier = Modifier.height(34.sdp())
                             ) {
-                                Text("Montar", color = Color(0xFF4E7B5E), fontSize = 14.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF4E7B5E))
+                                Text("Montar", color = Color(0xFF4E7B5E), fontSize = 13.ssp())
+                                Spacer(Modifier.width(6.sdp()))
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4E7B5E),
+                                    modifier = Modifier.size(18.sdp())
+                                )
                             }
                         }
 
                         Image(
                             painter = painterResource(id = R.drawable.caminhao_servico),
                             contentDescription = "Serviço",
-                            modifier = Modifier.size(130.dp)
+                            modifier = Modifier.size(110.sdp())
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.sdp()))
 
             // Serviços recentes
             Text(
                 text = "Serviços Recentes",
                 color = Color(0xFF2D2D2D),
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                fontSize = 16.ssp()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.sdp()))
 
             RecentesFuturistaClaro(
                 lista = listaServicos,
                 onItemClick = { /* ação */ }
             )
 
-            Spacer(modifier = Modifier.height(25.dp))
+            Spacer(modifier = Modifier.height(20.sdp()))
 
             // Grid de serviços (categorias)
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .height(220.sdp()),
+                verticalArrangement = Arrangement.spacedBy(12.sdp()),
+                horizontalArrangement = Arrangement.spacedBy(12.sdp())
             ) {
                 items(listaServicos) { servico ->
                     var pressed by remember { mutableStateOf(false) }
@@ -202,7 +211,7 @@ fun TelaHome(navController: NavController) {
 
                     Card(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(12.sdp()))
                             .fillMaxWidth()
                             .scale(scale)
                             .pointerInput(servico) {
@@ -211,7 +220,6 @@ fun TelaHome(navController: NavController) {
                                         pressed = true
                                         try {
                                             awaitRelease()
-                                            // Navegar para tela de criar serviço por categoria
                                         } finally {
                                             pressed = false
                                         }
@@ -222,37 +230,37 @@ fun TelaHome(navController: NavController) {
                                 )
                             },
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F6F6)),
-                        elevation = CardDefaults.cardElevation(2.dp)
+                        elevation = CardDefaults.cardElevation(2.sdp())
                     ) {
                         Column(
                             modifier = Modifier
-                                .padding(10.dp)
+                                .padding(8.sdp())
                                 .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Image(
                                 painter = painterResource(id = servico.imagem),
                                 contentDescription = servico.nome,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(42.sdp())
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(servico.nome, fontSize = 12.sp, color = Color(0xFF2D2D2D))
+                            Spacer(modifier = Modifier.height(6.sdp()))
+                            Text(servico.nome, fontSize = 11.ssp(), color = Color(0xFF2D2D2D))
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.sdp()))
 
-            // Card de suporte futurista (abaixo das categorias)
+            // Card de suporte futurista
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
+                    .height(130.sdp())
                     .clickable { navController.navigate("tela_ajuda_suporte") },
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.sdp()),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                elevation = CardDefaults.cardElevation(6.dp)
+                elevation = CardDefaults.cardElevation(6.sdp())
             ) {
                 Box(
                     modifier = Modifier
@@ -261,9 +269,9 @@ fun TelaHome(navController: NavController) {
                             Brush.linearGradient(
                                 listOf(Color(0xFF019D31), Color(0xFF71C58C))
                             ),
-                            shape = RoundedCornerShape(24.dp)
+                            shape = RoundedCornerShape(20.sdp())
                         )
-                        .padding(22.dp)
+                        .padding(18.sdp())
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -278,40 +286,42 @@ fun TelaHome(navController: NavController) {
                                 text = "Precisa de ajuda?",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
+                                fontSize = 17.ssp()
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(4.sdp()))
                             Text(
                                 text = "Fale com nosso suporte a qualquer momento.",
                                 color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 13.sp
+                                fontSize = 12.ssp()
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.sdp()))
                             Button(
                                 onClick = { navController.navigate("tela_ajuda_suporte") },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                                shape = RoundedCornerShape(50)
+                                shape = RoundedCornerShape(50),
+                                modifier = Modifier.height(36.sdp())
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.HeadsetMic,
                                     contentDescription = null,
-                                    tint = Color(0xFF019D31)
+                                    tint = Color(0xFF019D31),
+                                    modifier = Modifier.size(18.sdp())
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Entrar em contato", color = Color(0xFF019D31), fontSize = 14.sp)
+                                Spacer(modifier = Modifier.width(6.sdp()))
+                                Text("Entrar em contato", color = Color(0xFF019D31), fontSize = 13.ssp())
                             }
                         }
 
                         Image(
                             painter = painterResource(id = R.drawable.suporte),
                             contentDescription = "Suporte",
-                            modifier = Modifier.size(100.dp)
+                            modifier = Modifier.size(90.sdp())
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(18.sdp()))
         }
     }
 }
@@ -322,9 +332,9 @@ private fun RecentesFuturistaClaro(lista: List<Servico>, onItemClick: (Servico) 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .height(150.sdp()),
+        contentPadding = PaddingValues(horizontal = 4.sdp()),
+        horizontalArrangement = Arrangement.spacedBy(12.sdp())
     ) {
         items(lista) { servico ->
             var pressed by remember { mutableStateOf(false) }
@@ -332,8 +342,8 @@ private fun RecentesFuturistaClaro(lista: List<Servico>, onItemClick: (Servico) 
 
             Card(
                 modifier = Modifier
-                    .width(260.dp)
-                    .height(150.dp)
+                    .width(250.sdp())
+                    .height(140.sdp())
                     .scale(scale)
                     .pointerInput(servico) {
                         detectTapGestures(
@@ -344,27 +354,27 @@ private fun RecentesFuturistaClaro(lista: List<Servico>, onItemClick: (Servico) 
                             onTap = { onItemClick(servico) }
                         )
                     },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(16.sdp()),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                elevation = CardDefaults.cardElevation(4.dp)
+                elevation = CardDefaults.cardElevation(4.sdp())
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .border(
                             BorderStroke(
-                                2.dp,
+                                2.sdp(),
                                 Brush.horizontalGradient(listOf(Color(0xFF3C604B), Color(0xFF019D31)))
                             ),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.sdp())
                         )
                         .background(
                             brush = Brush.verticalGradient(
                                 listOf(Color(0xFFF4F4F4), Color(0xFFF5F5F5))
                             ),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.sdp())
                         )
-                        .padding(12.dp)
+                        .padding(12.sdp())
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
@@ -372,14 +382,14 @@ private fun RecentesFuturistaClaro(lista: List<Servico>, onItemClick: (Servico) 
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(68.sdp())
                                 .clip(CircleShape)
                                 .background(Color(0xFFE8E8E8)),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(56.dp)
+                                    .size(52.sdp())
                                     .clip(CircleShape)
                                     .background(Color(0xFF019D31).copy(alpha = 0.9f)),
                                 contentAlignment = Alignment.Center
@@ -387,21 +397,21 @@ private fun RecentesFuturistaClaro(lista: List<Servico>, onItemClick: (Servico) 
                                 Image(
                                     painter = painterResource(id = servico.imagem),
                                     contentDescription = servico.nome,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(34.sdp())
                                 )
                             }
                         }
 
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(12.sdp()))
 
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(servico.nome, color = Color(0xFF2D2D2D), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("Entrega rápida • 1.2 km", color = Color(0xFF6D6D6D), fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(servico.nome, color = Color(0xFF2D2D2D), fontWeight = FontWeight.Bold, fontSize = 15.ssp())
+                            Spacer(modifier = Modifier.height(5.sdp()))
+                            Text("Entrega rápida • 1.2 km", color = Color(0xFF6D6D6D), fontSize = 11.ssp())
+                            Spacer(modifier = Modifier.height(7.sdp()))
 
                             Surface(
                                 shape = RoundedCornerShape(20),
@@ -409,24 +419,25 @@ private fun RecentesFuturistaClaro(lista: List<Servico>, onItemClick: (Servico) 
                             ) {
                                 Text(
                                     text = "R$ 4,50",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 8.sdp(), vertical = 5.sdp()),
                                     color = Color(0xFF3C604B),
-                                    fontSize = 12.sp
+                                    fontSize = 11.ssp()
                                 )
                             }
                         }
 
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .size(34.sdp())
+                                .clip(RoundedCornerShape(10.sdp()))
                                 .background(Color(0x11019D31)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = "Abrir",
-                                tint = Color(0xFF019D31)
+                                tint = Color(0xFF019D31),
+                                modifier = Modifier.size(20.sdp())
                             )
                         }
                     }
@@ -443,8 +454,8 @@ val listaServicos = listOf(
     Servico("Farmácia", R.drawable.farmacia),
     Servico("Correio", R.drawable.correio),
     Servico("Mercado", R.drawable.mercado),
-//    Servico("Shopping", R.drawable.shopping),
     Servico("Feira", R.drawable.feira),
     Servico("Hortifruti", R.drawable.hortifruti),
     Servico("Lavanderia", R.drawable.lavanderia)
 )
+
