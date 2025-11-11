@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos

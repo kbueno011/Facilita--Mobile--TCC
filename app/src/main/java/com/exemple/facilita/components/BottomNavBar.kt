@@ -13,10 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.exemple.facilita.model.BottomNavItem
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 
 @Composable
 fun BottomNavBar(navController: NavController) {
@@ -31,30 +32,29 @@ fun BottomNavBar(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            .padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp)
-                // sombra para flutuar
+                .height(64.dp)
                 .shadow(
-                    elevation = 10.dp,
-                    shape = RoundedCornerShape(30.dp),
+                    elevation = 9.dp,
+                    shape = RoundedCornerShape(28.dp),
                     ambientColor = Color.Black.copy(alpha = 0.2f),
                     spotColor = Color.Black.copy(alpha = 0.2f)
                 )
-                // borda sutil em volta
                 .border(
-                    width = 1.2.dp,
-                    color = Color(0x22000000), // leve cinza transparente para parecer flutuante
-                    shape = RoundedCornerShape(30.dp)
+                    width = 1.dp,
+                    color = Color(0x22000000),
+                    shape = RoundedCornerShape(28.dp)
                 ),
             color = Color.White,
-            shape = RoundedCornerShape(30.dp)
+            shape = RoundedCornerShape(28.dp)
         ) {
-            val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+            val currentRoute =
+                navController.currentBackStackEntryAsState().value?.destination?.route
 
             Row(
                 modifier = Modifier
@@ -84,7 +84,7 @@ fun BottomNavBar(navController: NavController) {
                         label = {
                             Text(
                                 text = item.label,
-                                fontSize = 12.sp,
+                                fontSize = 11.ssp(),
                                 color = if (currentRoute == item.route) Color(0xFF00A651) else Color.Gray
                             )
                         },
@@ -102,3 +102,4 @@ fun BottomNavBar(navController: NavController) {
         }
     }
 }
+

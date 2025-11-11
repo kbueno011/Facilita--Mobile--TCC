@@ -185,8 +185,13 @@ fun TelaCriarServicoCategoria(
 
                 loading = false
                 if (response.isSuccessful && response.body() != null) {
-                    Toast.makeText(context, "Serviço criado com sucesso!", Toast.LENGTH_LONG).show()
-                    navController.popBackStack()
+                    Toast.makeText(context, "Serviço criado com sucesso!", Toast.LENGTH_SHORT).show()
+
+                    // Navegar para tela de aguardo do serviço
+                    val servicoId = "novo_${System.currentTimeMillis()}"
+                    navController.navigate("tela_aguardo_servico/$servicoId/$origemEndereco/$destinoEndereco") {
+                        popUpTo("tela_home") { inclusive = false }
+                    }
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Erro desconhecido"
                     Toast.makeText(context, "Erro: ${response.code()}", Toast.LENGTH_SHORT).show()

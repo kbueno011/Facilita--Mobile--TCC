@@ -41,6 +41,8 @@ import com.exemple.facilita.model.Parada
 import com.exemple.facilita.model.ServicoRequest
 import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.utils.sdp
+import com.exemple.facilita.utils.ssp
 import com.google.android.gms.common.api.ApiException
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.AutocompletePrediction
@@ -831,13 +833,14 @@ private fun enviarServicoParaAPI(
                 Log.d("API_DEBUG", "Serviço criado com sucesso! ID: ${servico?.id}")
                 Toast.makeText(
                     context,
-                    "Serviço criado com sucesso! ID: ${servico?.id}",
-                    Toast.LENGTH_LONG
+                    "Serviço criado com sucesso!",
+                    Toast.LENGTH_SHORT
                 ).show()
 
-                // Navegar para tela home
-                navController.navigate("tela_home") {
-                    popUpTo("tela_montar_servico/{endereco}") { inclusive = true }
+                // Navegar para tela de aguardo do serviço
+                val pedidoId = servico?.id?.toString() ?: "novo"
+                navController.navigate("tela_aguardo_servico/$pedidoId/$origemEndereco/$destinoEndereco") {
+                    popUpTo("tela_home") { inclusive = false }
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
