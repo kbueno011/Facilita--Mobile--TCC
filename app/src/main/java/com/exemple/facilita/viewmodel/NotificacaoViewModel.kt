@@ -1,254 +1,207 @@
 package com.exemple.facilita.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.exemple.facilita.model.*
+import com.exemple.facilita.data.api.NotificacaoApiService
+import com.exemple.facilita.data.models.Notificacao
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
-/**
- * ViewModel para gerenciar o estado das notificações
- */
-class NotificacaoViewModel : ViewModel() {
+class NotificacaoViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Estado das notificações
+    private val apiService: NotificacaoApiService
+
+    init {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://servidor-facilita.onrender.com/v1/facilita/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        apiService = retrofit.create(NotificacaoApiService::class.java)
+    }
+
     private val _notificacoes = MutableStateFlow<List<Notificacao>>(emptyList())
     val notificacoes: StateFlow<List<Notificacao>> = _notificacoes.asStateFlow()
 
-    // Contagem de notificações não lidas
-    private val _notificacoesNaoLidas = MutableStateFlow(0)
-    val notificacoesNaoLidas: StateFlow<Int> = _notificacoesNaoLidas.asStateFlow()
+    private val _notificacoesNaoLidas = MutableStateFlow<List<Notificacao>>(emptyList())
+    val notificacoesNaoLidas: StateFlow<List<Notificacao>> = _notificacoesNaoLidas.asStateFlow()
 
-    // Estado de carregamento
+    private val _contadorNaoLidas = MutableStateFlow(0)
+    val contadorNaoLidas: StateFlow<Int> = _contadorNaoLidas.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // Notificação temporária para exibição in-app
-    private val _notificacaoTemporaria = MutableStateFlow<Notificacao?>(null)
-    val notificacaoTemporaria: StateFlow<Notificacao?> = _notificacaoTemporaria.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
-    init {
-        carregarNotificacoes()
-        // Simular notificações de exemplo (remover em produção)
-        gerarNotificacoesExemplo()
+    private var pollingJob: Job? = null
+
+    // Inicia polling para verificar novas notificações
+    fun iniciarMonitoramento(token: String, intervalo: Long = 30000) {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch {
+            while (isActive) {
+                try {
+                    buscarNotificacoes(token)
+                    delay(intervalo) // Padrão: 30 segundos
+                } catch (e: Exception) {
+                    Log.e("NotificacaoViewModel", "Erro no polling: ${e.message}", e)
+                    delay(intervalo)
+                }
+            }
+        }
     }
 
-    /**
-     * Carrega as notificações do servidor
-     */
-    fun carregarNotificacoes() {
+    // Para o monitoramento
+    fun pararMonitoramento() {
+        pollingJob?.cancel()
+        pollingJob = null
+    }
+
+    // Busca todas as notificações
+    fun buscarNotificacoes(token: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.obterNotificacoes("Bearer $token")
+
+                if (response.isSuccessful && response.body()?.statusCode == 200) {
+                    val novas = response.body()?.data ?: emptyList()
+                    _notificacoes.value = novas
+
+                    // Atualiza contador de não lidas
+                    val naoLidas = novas.filter { !it.lida }
+                    _notificacoesNaoLidas.value = naoLidas
+                    _contadorNaoLidas.value = naoLidas.size
+
+                    Log.d("NotificacaoViewModel", "✅ ${novas.size} notificações, ${naoLidas.size} não lidas")
+                } else {
+                    Log.e("NotificacaoViewModel", "❌ Erro ao buscar: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("NotificacaoViewModel", "❌ Exceção ao buscar notificações", e)
+                _error.value = "Erro ao buscar notificações: ${e.message}"
+            }
+        }
+    }
+
+    // Busca apenas não lidas
+    fun buscarNotificacoesNaoLidas(token: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // TODO: Implementar chamada à API
-                // val response = notificacaoService.buscarNotificacoes()
-                // _notificacoes.value = response.notificacoes
-                // _notificacoesNaoLidas.value = response.totalNaoLidas
+                val response = apiService.obterNotificacoesNaoLidas("Bearer $token")
+
+                if (response.isSuccessful && response.body()?.statusCode == 200) {
+                    val naoLidas = response.body()?.data ?: emptyList()
+                    _notificacoesNaoLidas.value = naoLidas
+                    _contadorNaoLidas.value = naoLidas.size
+
+                    Log.d("NotificacaoViewModel", "✅ ${naoLidas.size} notificações não lidas")
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("NotificacaoViewModel", "❌ Erro ao buscar não lidas", e)
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    /**
-     * Adiciona uma nova notificação
-     */
-    fun adicionarNotificacao(notificacao: Notificacao) {
+    // Marcar como lida
+    fun marcarComoLida(token: String, notificacaoId: Int, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
-            val listaAtual = _notificacoes.value.toMutableList()
-            listaAtual.add(0, notificacao)
-            _notificacoes.value = listaAtual
+            try {
+                val response = apiService.marcarComoLida("Bearer $token", notificacaoId)
 
-            if (notificacao.status == StatusNotificacao.NAO_LIDA) {
-                _notificacoesNaoLidas.value += 1
-            }
-
-            // Exibir notificação temporária (toast-like)
-            _notificacaoTemporaria.value = notificacao
-        }
-    }
-
-    /**
-     * Marca uma notificação como lida
-     */
-    fun marcarComoLida(notificacaoId: String) {
-        viewModelScope.launch {
-            val listaAtualizada = _notificacoes.value.map { notif ->
-                if (notif.id == notificacaoId && notif.status == StatusNotificacao.NAO_LIDA) {
-                    _notificacoesNaoLidas.value = (_notificacoesNaoLidas.value - 1).coerceAtLeast(0)
-                    notif.copy(status = StatusNotificacao.LIDA)
-                } else {
-                    notif
-                }
-            }
-            _notificacoes.value = listaAtualizada
-
-            // TODO: Atualizar no servidor
-            // notificacaoService.marcarComoLida(notificacaoId)
-        }
-    }
-
-    /**
-     * Marca todas as notificações como lidas
-     */
-    fun marcarTodasComoLidas() {
-        viewModelScope.launch {
-            val listaAtualizada = _notificacoes.value.map { notif ->
-                if (notif.status == StatusNotificacao.NAO_LIDA) {
-                    notif.copy(status = StatusNotificacao.LIDA)
-                } else {
-                    notif
-                }
-            }
-            _notificacoes.value = listaAtualizada
-            _notificacoesNaoLidas.value = 0
-
-            // TODO: Atualizar no servidor
-            // notificacaoService.marcarTodasComoLidas()
-        }
-    }
-
-    /**
-     * Remove uma notificação
-     */
-    fun removerNotificacao(notificacaoId: String) {
-        viewModelScope.launch {
-            val notifRemovida = _notificacoes.value.find { it.id == notificacaoId }
-            if (notifRemovida?.status == StatusNotificacao.NAO_LIDA) {
-                _notificacoesNaoLidas.value = (_notificacoesNaoLidas.value - 1).coerceAtLeast(0)
-            }
-
-            _notificacoes.value = _notificacoes.value.filter { it.id != notificacaoId }
-
-            // TODO: Remover no servidor
-            // notificacaoService.removerNotificacao(notificacaoId)
-        }
-    }
-
-    /**
-     * Arquiva uma notificação
-     */
-    fun arquivarNotificacao(notificacaoId: String) {
-        viewModelScope.launch {
-            val listaAtualizada = _notificacoes.value.map { notif ->
-                if (notif.id == notificacaoId) {
-                    if (notif.status == StatusNotificacao.NAO_LIDA) {
-                        _notificacoesNaoLidas.value = (_notificacoesNaoLidas.value - 1).coerceAtLeast(0)
+                if (response.isSuccessful && response.body()?.statusCode == 200) {
+                    // Atualiza lista local
+                    _notificacoes.value = _notificacoes.value.map {
+                        if (it.id == notificacaoId) it.copy(lida = true) else it
                     }
-                    notif.copy(status = StatusNotificacao.ARQUIVADA)
-                } else {
-                    notif
+
+                    // Atualiza não lidas
+                    _notificacoesNaoLidas.value = _notificacoesNaoLidas.value.filter {
+                        it.id != notificacaoId
+                    }
+                    _contadorNaoLidas.value = _notificacoesNaoLidas.value.size
+
+                    Log.d("NotificacaoViewModel", "✅ Notificação $notificacaoId marcada como lida")
+                    onSuccess()
                 }
+            } catch (e: Exception) {
+                Log.e("NotificacaoViewModel", "❌ Erro ao marcar como lida", e)
             }
-            _notificacoes.value = listaAtualizada
         }
     }
 
-    /**
-     * Limpa a notificação temporária
-     */
-    fun limparNotificacaoTemporaria() {
-        _notificacaoTemporaria.value = null
-    }
+    // Marcar todas como lidas
+    fun marcarTodasComoLidas(token: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val response = apiService.marcarTodasComoLidas("Bearer $token")
 
-    /**
-     * Filtra notificações por tipo
-     */
-    fun filtrarPorTipo(tipo: TipoNotificacao): List<Notificacao> {
-        return _notificacoes.value.filter { it.tipo == tipo }
-    }
+                if (response.isSuccessful && response.body()?.statusCode == 200) {
+                    // Atualiza todas localmente
+                    _notificacoes.value = _notificacoes.value.map {
+                        it.copy(lida = true)
+                    }
+                    _notificacoesNaoLidas.value = emptyList()
+                    _contadorNaoLidas.value = 0
 
-    /**
-     * Busca notificações por texto
-     */
-    fun buscarNotificacoes(query: String): List<Notificacao> {
-        if (query.isBlank()) return _notificacoes.value
-
-        val queryLower = query.lowercase()
-        return _notificacoes.value.filter {
-            it.titulo.lowercase().contains(queryLower) ||
-            it.mensagem.lowercase().contains(queryLower)
+                    Log.d("NotificacaoViewModel", "✅ Todas marcadas como lidas")
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                Log.e("NotificacaoViewModel", "❌ Erro ao marcar todas", e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
-    /**
-     * Gera notificações de exemplo para demonstração
-     */
-    private fun gerarNotificacoesExemplo() {
-        val exemplos = listOf(
-            Notificacao(
-                id = "1",
-                tipo = TipoNotificacao.PEDIDO_ACEITO,
-                titulo = "Pedido Aceito! 🎉",
-                mensagem = "Seu pedido #1234 foi aceito por João Silva. O prestador está a caminho!",
-                dataHora = LocalDateTime.now().minusMinutes(5),
-                prioridade = PrioridadeNotificacao.ALTA,
-                acaoPrincipal = AcaoNotificacao("Ver Detalhes", "tela_pedido_detalhes/1234")
-            ),
-            Notificacao(
-                id = "2",
-                tipo = TipoNotificacao.PRESTADOR_A_CAMINHO,
-                titulo = "Prestador a Caminho 🚗",
-                mensagem = "João Silva está a 5 minutos de distância. Tempo estimado: 12:30",
-                dataHora = LocalDateTime.now().minusMinutes(15),
-                prioridade = PrioridadeNotificacao.ALTA,
-                acaoPrincipal = AcaoNotificacao("Rastrear", "tela_rastreamento")
-            ),
-            Notificacao(
-                id = "3",
-                tipo = TipoNotificacao.PAGAMENTO_APROVADO,
-                titulo = "Pagamento Aprovado ✅",
-                mensagem = "Seu pagamento de R$ 45,00 foi processado com sucesso!",
-                dataHora = LocalDateTime.now().minusHours(1),
-                prioridade = PrioridadeNotificacao.MEDIA,
-                status = StatusNotificacao.LIDA
-            ),
-            Notificacao(
-                id = "4",
-                tipo = TipoNotificacao.NOVO_CUPOM,
-                titulo = "Novo Cupom Disponível! 🎁",
-                mensagem = "Ganhe 20% OFF na sua próxima compra! Cupom: FACILITA20",
-                dataHora = LocalDateTime.now().minusHours(3),
-                prioridade = PrioridadeNotificacao.MEDIA,
-                acaoPrincipal = AcaoNotificacao("Usar Agora", "tela_cupons")
-            ),
-            Notificacao(
-                id = "5",
-                tipo = TipoNotificacao.PEDIDO_CONCLUIDO,
-                titulo = "Pedido Concluído! ⭐",
-                mensagem = "Seu pedido #1233 foi concluído. Que tal avaliar o prestador?",
-                dataHora = LocalDateTime.now().minusHours(5),
-                prioridade = PrioridadeNotificacao.BAIXA,
-                status = StatusNotificacao.LIDA,
-                acaoPrincipal = AcaoNotificacao("Avaliar", "tela_avaliacao/1233")
-            ),
-            Notificacao(
-                id = "6",
-                tipo = TipoNotificacao.SALDO_RECEBIDO,
-                titulo = "Saldo Creditado 💰",
-                mensagem = "R$ 15,00 foram creditados na sua carteira pelo cashback!",
-                dataHora = LocalDateTime.now().minusDays(1),
-                prioridade = PrioridadeNotificacao.MEDIA,
-                status = StatusNotificacao.LIDA
-            ),
-            Notificacao(
-                id = "7",
-                tipo = TipoNotificacao.PROMOCAO,
-                titulo = "Promoção Relâmpago! ⚡",
-                mensagem = "Frete grátis em pedidos de farmácia até às 18h! Aproveite!",
-                dataHora = LocalDateTime.now().minusDays(2),
-                prioridade = PrioridadeNotificacao.ALTA,
-                status = StatusNotificacao.LIDA
-            )
-        )
+    // Deletar notificação
+    fun deletarNotificacao(token: String, notificacaoId: Int, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.deletarNotificacao("Bearer $token", notificacaoId)
 
-        _notificacoes.value = exemplos
-        _notificacoesNaoLidas.value = exemplos.count { it.status == StatusNotificacao.NAO_LIDA }
+                if (response.isSuccessful && response.body()?.statusCode == 200) {
+                    // Remove localmente
+                    _notificacoes.value = _notificacoes.value.filter {
+                        it.id != notificacaoId
+                    }
+                    _notificacoesNaoLidas.value = _notificacoesNaoLidas.value.filter {
+                        it.id != notificacaoId
+                    }
+                    _contadorNaoLidas.value = _notificacoesNaoLidas.value.size
+
+                    Log.d("NotificacaoViewModel", "✅ Notificação deletada")
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                Log.e("NotificacaoViewModel", "❌ Erro ao deletar", e)
+            }
+        }
+    }
+
+    // Limpar erro
+    fun limparErro() {
+        _error.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        pararMonitoramento()
     }
 }
 

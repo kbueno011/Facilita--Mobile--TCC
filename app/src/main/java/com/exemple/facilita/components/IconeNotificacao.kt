@@ -31,7 +31,7 @@ fun IconeNotificacao(
     viewModel: NotificacaoViewModel = viewModel(),
     corIcone: Color = Color(0xFF2C2C2C)
 ) {
-    val notificacoesNaoLidas by viewModel.notificacoesNaoLidas.collectAsState()
+    val contadorNaoLidas by viewModel.contadorNaoLidas.collectAsState()
 
     Box(
         modifier = Modifier
@@ -50,7 +50,7 @@ fun IconeNotificacao(
         )
 
         // Badge com contador
-        if (notificacoesNaoLidas > 0) {
+        if (contadorNaoLidas > 0) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -61,7 +61,7 @@ fun IconeNotificacao(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (notificacoesNaoLidas > 9) "9+" else notificacoesNaoLidas.toString(),
+                    text = if (contadorNaoLidas > 9) "9+" else contadorNaoLidas.toString(),
                     fontSize = 8.ssp(),
                     fontWeight = FontWeight.Bold,
                     color = Color.White

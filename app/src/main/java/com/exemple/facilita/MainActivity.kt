@@ -165,18 +165,31 @@ fun AppNavHost(navController: NavHostController) {
 
         // Tela de aguardo de serviço
         composable(
-            route = "tela_aguardo_servico/{pedidoId}/{origem}/{destino}",
+            route = "tela_aguardo_servico/{servicoId}/{origem}/{destino}",
             arguments = listOf(
-                navArgument("pedidoId") { type = NavType.StringType },
-                navArgument("origem") { type = NavType.StringType },
-                navArgument("destino") { type = NavType.StringType }
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("origem") { type = NavType.StringType; defaultValue = "" },
+                navArgument("destino") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
             TelaAguardoServico(
                 navController = navController,
-                pedidoId = backStackEntry.arguments?.getString("pedidoId"),
-                origem = backStackEntry.arguments?.getString("origem"),
-                destino = backStackEntry.arguments?.getString("destino")
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "",
+                origemEndereco = backStackEntry.arguments?.getString("origem"),
+                destinoEndereco = backStackEntry.arguments?.getString("destino")
+            )
+        }
+
+        // Tela de rastreamento em tempo real
+        composable(
+            route = "tela_rastreamento_servico/{servicoId}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaRastreamentoServico(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: ""
             )
         }
 
