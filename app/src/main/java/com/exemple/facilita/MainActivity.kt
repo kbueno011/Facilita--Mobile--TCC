@@ -144,6 +144,25 @@ fun AppNavHost(navController: NavHostController) {
             TelaNotificacoes(navController)
         }
 
+        // Tela de pagamento do serviço
+        composable(
+            route = "tela_pagamento_servico/{servicoId}/{valorServico}/{origem}/{destino}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("valorServico") { type = NavType.StringType },
+                navArgument("origem") { type = NavType.StringType },
+                navArgument("destino") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaPagamentoServico(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "",
+                valorServico = backStackEntry.arguments?.getString("valorServico")?.toDoubleOrNull() ?: 25.0,
+                origemEndereco = backStackEntry.arguments?.getString("origem") ?: "",
+                destinoEndereco = backStackEntry.arguments?.getString("destino") ?: ""
+            )
+        }
+
         // Tela de aguardo de serviço
         composable(
             route = "tela_aguardo_servico/{pedidoId}/{origem}/{destino}",

@@ -1,20 +1,21 @@
 package com.exemple.facilita.viewmodel
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.exemple.facilita.data.api.*
 import com.exemple.facilita.data.models.*
+import com.exemple.facilita.repository.CarteiraLocalRepository
 import com.exemple.facilita.repository.PagBankRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
-class CarteiraViewModel : ViewModel() {
+class CarteiraViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val localRepository = CarteiraLocalRepository(application.applicationContext)
+    private val pagBankRepository = PagBankRepository()
 
     private val _saldo = MutableStateFlow(SaldoCarteira(0.0, 0.0, 0.0))
     val saldo: StateFlow<SaldoCarteira> = _saldo.asStateFlow()
@@ -31,110 +32,139 @@ class CarteiraViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
-
-    private val _ultimaTransacao = MutableStateFlow<TransacaoCarteira?>(null)
-    val ultimaTransacao: StateFlow<TransacaoCarteira?> = _ultimaTransacao.asStateFlow()
-
     private val _pixQrCode = MutableStateFlow<String?>(null)
     val pixQrCode: StateFlow<String?> = _pixQrCode.asStateFlow()
 
     private val _pixQrCodeBase64 = MutableStateFlow<String?>(null)
     val pixQrCodeBase64: StateFlow<String?> = _pixQrCodeBase64.asStateFlow()
 
-    // Repositório PagBank
-    private val pagBankRepository = PagBankRepository()
-
-    private val carteiraApi: CarteiraApiService
-
     init {
-        // Inicializa API local (adaptar para seu base URL)
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://api.facilita.com/") // Substituir pela sua URL
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        carteiraApi = retrofit.create(CarteiraApiService::class.java)
-
-        // Inicia com saldo zerado - sem dados simulados
-        _saldo.value = SaldoCarteira(
-            saldoDisponivel = 0.0,
-            saldoBloqueado = 0.0,
-            saldoTotal = 0.0
-        )
-
-        // Inicia sem transações
-        _transacoes.value = emptyList()
-
-        // Cartões e contas podem continuar para testes
-        _cartoesSalvos.value = listOf(
-            CartaoSalvo(
-                id = "1",
-                ultimos4Digitos = "4321",
-                bandeira = "Visa",
-                nomeCompleto = "João Silva",
-                validade = "12/2025",
-                isPrincipal = true
-            )
-        )
-
-        _contasBancarias.value = listOf(
-            ContaBancaria(
-                id = "1",
-                banco = "Banco do Brasil",
-                agencia = "1234-5",
-                conta = "12345-6",
-                tipoConta = "CORRENTE",
-                nomeCompleto = "João Silva",
-                cpf = "123.456.789-00",
-                isPrincipal = true
-            )
-        )
+        carregarDadosLocais()
+        Log.d("CarteiraViewModel", "✅ ViewModel inicializado com persistência local")
     }
 
-    // Removido carregarDadosSimulados()
+    private fun carregarDadosLocais() {
+        try {
+            val saldoSalvo = localRepository.obterSaldo()
+            _saldo.value = saldoSalvo
+
+            val transacoesSalvas = localRepository.obterTransacoes()
+            _transacoes.value = transacoesSalvas
+
+            Log.d("CarteiraViewModel", "📊 Dados carregados: Saldo=R$ ${saldoSalvo.saldoDisponivel}, Transações=${transacoesSalvas.size}")
+        } catch (e: Exception) {
+            Log.e("CarteiraViewModel", "❌ Erro ao carregar dados locais", e)
+        }
+    }
 
     fun carregarSaldo(token: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                val response = carteiraApi.obterSaldo("Bearer $token")
-                if (response.isSuccessful && response.body() != null) {
-                    _saldo.value = response.body()!!
-                } else {
-                    _error.value = "Erro ao carregar saldo"
-                }
-            } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao carregar saldo", e)
-                _error.value = "Erro de conexão"
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        carregarDadosLocais()
     }
 
     fun carregarTransacoes(token: String) {
+        _transacoes.value = localRepository.obterTransacoes()
+    }
+
+    // DEPÓSITO SIMULADO (para testes)
+    fun depositarSimulado(valor: Double) {
+        viewModelScope.launch {
+            try {
+                val novoSaldo = localRepository.adicionarSaldo(valor)
+                _saldo.value = novoSaldo
+
+                val transacao = localRepository.criarTransacaoDeposito(
+                    valor = valor,
+                    metodo = MetodoPagamento.PIX,
+                    referenciaPagBank = null
+                ).copy(status = StatusTransacao.CONCLUIDO)
+
+                localRepository.salvarTransacao(transacao)
+                _transacoes.value = localRepository.obterTransacoes()
+
+                Log.d("CarteiraViewModel", "✅ Depósito simulado: R$ $valor")
+            } catch (e: Exception) {
+                Log.e("CarteiraViewModel", "❌ Erro no depósito simulado", e)
+            }
+        }
+    }
+
+    // DÉBITO PARA PAGAMENTO DE SERVIÇO
+    fun debitarParaServico(
+        valorServico: Double,
+        servicoId: String,
+        descricaoServico: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
+
             try {
-                val response = carteiraApi.obterTransacoes("Bearer $token")
-                if (response.isSuccessful && response.body() != null) {
-                    _transacoes.value = response.body()!!
-                } else {
-                    _error.value = "Erro ao carregar transações"
-                }
+                Log.d("CarteiraViewModel", "🔄 Debitando R$ $valorServico para serviço $servicoId")
+
+                val resultado = localRepository.debitarSaldo(valorServico)
+
+                resultado.fold(
+                    onSuccess = { novoSaldo ->
+                        _saldo.value = novoSaldo
+
+                        val transacao = localRepository.criarTransacaoDebito(
+                            valor = valorServico,
+                            descricao = descricaoServico,
+                            servicoId = servicoId
+                        )
+
+                        localRepository.salvarTransacao(transacao)
+                        _transacoes.value = localRepository.obterTransacoes()
+
+                        Log.d("CarteiraViewModel", "✅ Débito realizado - Novo saldo: R$ ${novoSaldo.saldoDisponivel}")
+                        onSuccess()
+                    },
+                    onFailure = { exception ->
+                        Log.e("CarteiraViewModel", "❌ Falha ao debitar: ${exception.message}")
+                        onError(exception.message ?: "Saldo insuficiente")
+                    }
+                )
             } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao carregar transações", e)
-                _error.value = "Erro de conexão"
+                Log.e("CarteiraViewModel", "❌ Erro ao debitar", e)
+                onError("Erro ao processar débito: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
+    // ADICIONAR CONTA BANCÁRIA LOCAL
+    fun adicionarContaBancariaLocal(
+        banco: String,
+        agencia: String,
+        conta: String,
+        tipoConta: String,
+        nomeCompleto: String,
+        cpf: String,
+        isPrincipal: Boolean
+    ) {
+        val novaConta = ContaBancaria(
+            id = System.currentTimeMillis().toString(),
+            banco = banco,
+            agencia = agencia,
+            conta = conta,
+            tipoConta = tipoConta,
+            nomeCompleto = nomeCompleto,
+            cpf = cpf,
+            isPrincipal = isPrincipal
+        )
+
+        _contasBancarias.value = _contasBancarias.value + novaConta
+        Log.d("CarteiraViewModel", "✅ Conta bancária adicionada: $banco")
+    }
+
+    fun limparTodosDados() {
+        localRepository.limparDados()
+        carregarDadosLocais()
+    }
+
+    // DEPÓSITO VIA PIX (integração PagBank)
     fun depositarViaPix(
         token: String,
         valor: Double,
@@ -143,14 +173,12 @@ class CarteiraViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
             _pixQrCode.value = null
             _pixQrCodeBase64.value = null
 
             try {
                 val referenceId = "DEP_PIX_${System.currentTimeMillis()}"
-
-                Log.d("CarteiraViewModel", "Iniciando depósito PIX - Valor: R$ $valor")
+                Log.d("CarteiraViewModel", "🔄 Iniciando depósito PIX - Valor: R$ $valor")
 
                 val result = pagBankRepository.criarCobrancaPix(
                     referenceId = referenceId,
@@ -160,32 +188,23 @@ class CarteiraViewModel : ViewModel() {
 
                 result.fold(
                     onSuccess = { chargeResponse ->
-                        Log.d("CarteiraViewModel", "Cobrança PIX criada: ${chargeResponse.id}")
+                        Log.d("CarteiraViewModel", "✅ Cobrança PIX criada: ${chargeResponse.id}")
 
-                        // Extrai QR Code do PIX
                         val pixResponse = chargeResponse.paymentMethod?.pix
                         if (pixResponse != null) {
                             _pixQrCode.value = pixResponse.qrCode
                             _pixQrCodeBase64.value = pixResponse.qrCodeBase64
 
-                            // Registra transação pendente
-                            val novaTransacao = TransacaoCarteira(
-                                id = chargeResponse.id,
-                                tipo = TipoTransacao.DEPOSITO,
+                            val novaTransacao = localRepository.criarTransacaoDeposito(
                                 valor = valor,
-                                descricao = "Depósito via PIX",
-                                data = "Agora",
-                                status = StatusTransacao.PENDENTE,
                                 metodo = MetodoPagamento.PIX,
                                 referenciaPagBank = chargeResponse.id
                             )
 
-                            _ultimaTransacao.value = novaTransacao
+                            localRepository.salvarTransacao(novaTransacao)
+                            _transacoes.value = localRepository.obterTransacoes()
 
-                            // Adiciona à lista de transações
-                            _transacoes.value = listOf(novaTransacao) + _transacoes.value
-
-                            Log.d("CarteiraViewModel", "QR Code PIX gerado com sucesso")
+                            Log.d("CarteiraViewModel", "✅ QR Code PIX gerado com sucesso")
                             onSuccess()
                         } else {
                             val erro = "QR Code PIX não disponível na resposta"
@@ -200,7 +219,7 @@ class CarteiraViewModel : ViewModel() {
                     }
                 )
             } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao depositar via PIX", e)
+                Log.e("CarteiraViewModel", "❌ Erro ao depositar via PIX", e)
                 onError("Erro de conexão: ${e.message}")
             } finally {
                 _isLoading.value = false
@@ -208,44 +227,39 @@ class CarteiraViewModel : ViewModel() {
         }
     }
 
-    fun limparPixQrCode() {
-        _pixQrCode.value = null
-        _pixQrCodeBase64.value = null
-    }
-
     fun confirmarPagamentoPix(valor: Double) {
-        // Atualiza o saldo
-        _saldo.value = _saldo.value.copy(
-            saldoDisponivel = _saldo.value.saldoDisponivel + valor,
-            saldoTotal = _saldo.value.saldoTotal + valor
-        )
+        viewModelScope.launch {
+            try {
+                val novoSaldo = localRepository.adicionarSaldo(valor)
+                _saldo.value = novoSaldo
 
-        // Atualiza a transação PENDENTE para CONCLUIDO ao invés de criar nova
-        val transacoesAtualizadas = _transacoes.value.map { transacao ->
-            if (transacao.status == StatusTransacao.PENDENTE &&
-                transacao.tipo == TipoTransacao.DEPOSITO &&
-                transacao.metodo == MetodoPagamento.PIX &&
-                transacao.valor == valor) {
-                // Encontrou a transação pendente, atualiza para CONCLUIDO
-                transacao.copy(
-                    status = StatusTransacao.CONCLUIDO,
-                    data = "Agora"
-                )
-            } else {
-                transacao
+                val transacoes = localRepository.obterTransacoes()
+                val transacaoPendente = transacoes.find {
+                    it.status == StatusTransacao.PENDENTE &&
+                    it.tipo == TipoTransacao.DEPOSITO &&
+                    it.metodo == MetodoPagamento.PIX &&
+                    it.valor == valor
+                }
+
+                if (transacaoPendente != null) {
+                    localRepository.atualizarStatusTransacao(
+                        transacaoPendente.id,
+                        StatusTransacao.CONCLUIDO
+                    )
+                }
+
+                _transacoes.value = localRepository.obterTransacoes()
+                _pixQrCode.value = null
+                _pixQrCodeBase64.value = null
+
+                Log.d("CarteiraViewModel", "✅ Pagamento PIX confirmado - Novo saldo: R$ ${novoSaldo.saldoDisponivel}")
+            } catch (e: Exception) {
+                Log.e("CarteiraViewModel", "❌ Erro ao confirmar pagamento PIX", e)
             }
         }
-
-        _transacoes.value = transacoesAtualizadas
-
-        // Limpa o QR Code
-        limparPixQrCode()
-
-        Log.d("CarteiraViewModel", "✅ Pagamento PIX confirmado - Valor: R$ $valor")
-        Log.d("CarteiraViewModel", "✅ Novo saldo: R$ ${_saldo.value.saldoDisponivel}")
-        Log.d("CarteiraViewModel", "✅ Total de transações: ${_transacoes.value.size}")
     }
 
+    // DEPÓSITO VIA CARTÃO
     fun depositarViaCartao(
         token: String,
         valor: Double,
@@ -260,12 +274,10 @@ class CarteiraViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
 
             try {
                 val referenceId = "DEP_CARD_${System.currentTimeMillis()}"
-
-                Log.d("CarteiraViewModel", "Iniciando depósito via cartão - Valor: R$ $valor")
+                Log.d("CarteiraViewModel", "🔄 Iniciando depósito via cartão - Valor: R$ $valor")
 
                 val result = pagBankRepository.criarCobrancaCartao(
                     referenceId = referenceId,
@@ -281,39 +293,27 @@ class CarteiraViewModel : ViewModel() {
 
                 result.fold(
                     onSuccess = { chargeResponse ->
-                        Log.d("CarteiraViewModel", "Cobrança cartão criada: ${chargeResponse.id}")
+                        Log.d("CarteiraViewModel", "✅ Cobrança cartão criada: ${chargeResponse.id}")
 
-                        // Verifica o status
                         when (chargeResponse.status) {
                             "AUTHORIZED", "PAID" -> {
-                                // Pagamento aprovado
-                                val novaTransacao = TransacaoCarteira(
-                                    id = chargeResponse.id,
-                                    tipo = TipoTransacao.DEPOSITO,
+                                val novoSaldo = localRepository.adicionarSaldo(valor)
+                                _saldo.value = novoSaldo
+
+                                val transacao = localRepository.criarTransacaoDeposito(
                                     valor = valor,
-                                    descricao = "Depósito via Cartão de Crédito",
-                                    data = "Agora",
-                                    status = StatusTransacao.CONCLUIDO,
                                     metodo = MetodoPagamento.CARTAO_CREDITO,
                                     referenciaPagBank = chargeResponse.id
-                                )
+                                ).copy(status = StatusTransacao.CONCLUIDO)
 
-                                _ultimaTransacao.value = novaTransacao
+                                localRepository.salvarTransacao(transacao)
+                                _transacoes.value = localRepository.obterTransacoes()
 
-                                // Atualiza saldo
-                                _saldo.value = _saldo.value.copy(
-                                    saldoDisponivel = _saldo.value.saldoDisponivel + valor,
-                                    saldoTotal = _saldo.value.saldoTotal + valor
-                                )
-
-                                // Adiciona transação à lista
-                                _transacoes.value = listOf(novaTransacao) + _transacoes.value
-
-                                Log.d("CarteiraViewModel", "Depósito via cartão concluído")
+                                Log.d("CarteiraViewModel", "✅ Depósito via cartão concluído")
                                 onSuccess()
                             }
                             "DECLINED" -> {
-                                Log.e("CarteiraViewModel", "Cartão recusado")
+                                Log.e("CarteiraViewModel", "❌ Cartão recusado")
                                 onError("Cartão recusado. Verifique os dados ou use outro cartão.")
                             }
                             else -> {
@@ -329,7 +329,7 @@ class CarteiraViewModel : ViewModel() {
                     }
                 )
             } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao depositar via cartão", e)
+                Log.e("CarteiraViewModel", "❌ Erro ao depositar via cartão", e)
                 onError("Erro de conexão: ${e.message}")
             } finally {
                 _isLoading.value = false
@@ -337,6 +337,7 @@ class CarteiraViewModel : ViewModel() {
         }
     }
 
+    // SAQUE
     fun sacar(
         token: String,
         valor: Double,
@@ -346,163 +347,45 @@ class CarteiraViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
 
             try {
-                if (valor > _saldo.value.saldoDisponivel) {
-                    onError("Saldo insuficiente")
-                    _isLoading.value = false
-                    return@launch
-                }
+                Log.d("CarteiraViewModel", "🔄 Solicitando saque de R$ $valor")
 
-                // MODO SIMULADO - Funciona sem backend
-                Log.d("CarteiraViewModel", "⚠️ MODO SIMULADO - Processando saque")
-                delay(1500) // Simula delay da API
+                val resultado = localRepository.debitarSaldo(valor)
 
-                // Cria a transação
-                val transacao = TransacaoCarteira(
-                    id = "SAQUE_${System.currentTimeMillis()}",
-                    tipo = TipoTransacao.SAQUE,
-                    valor = -valor,
-                    descricao = "Transferência para conta bancária",
-                    data = "Agora",
-                    status = StatusTransacao.CONCLUIDO,
-                    metodo = null
+                resultado.fold(
+                    onSuccess = { novoSaldo ->
+                        _saldo.value = novoSaldo
+
+                        val transacao = TransacaoCarteira(
+                            id = "SAQ_${System.currentTimeMillis()}",
+                            tipo = TipoTransacao.SAQUE,
+                            valor = valor,
+                            descricao = "Saque para conta bancária",
+                            data = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("pt", "BR")).format(java.util.Date()),
+                            status = StatusTransacao.CONCLUIDO,
+                            metodo = null,
+                            referenciaPagBank = contaBancariaId
+                        )
+
+                        localRepository.salvarTransacao(transacao)
+                        _transacoes.value = localRepository.obterTransacoes()
+
+                        Log.d("CarteiraViewModel", "✅ Saque realizado com sucesso")
+                        onSuccess()
+                    },
+                    onFailure = { exception ->
+                        Log.e("CarteiraViewModel", "❌ Falha ao sacar: ${exception.message}")
+                        onError(exception.message ?: "Saldo insuficiente")
+                    }
                 )
-
-                // Atualiza saldo
-                _saldo.value = _saldo.value.copy(
-                    saldoDisponivel = _saldo.value.saldoDisponivel - valor,
-                    saldoTotal = _saldo.value.saldoTotal - valor
-                )
-
-                // Adiciona transação à lista
-                _transacoes.value = listOf(transacao) + _transacoes.value
-
-                _ultimaTransacao.value = transacao
-
-                Log.d("CarteiraViewModel", "✅ Saque simulado concluído - Valor: R$ $valor")
-                Log.d("CarteiraViewModel", "✅ Novo saldo: R$ ${_saldo.value.saldoDisponivel}")
-
-                onSuccess()
             } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao realizar saque", e)
+                Log.e("CarteiraViewModel", "❌ Erro ao sacar", e)
                 onError("Erro ao processar saque: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
-    }
-
-    fun adicionarCartao(
-        token: String,
-        request: CartaoRequest,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val response = carteiraApi.adicionarCartao("Bearer $token", request)
-                if (response.isSuccessful && response.body() != null) {
-                    _cartoesSalvos.value = _cartoesSalvos.value + response.body()!!
-                    onSuccess()
-                } else {
-                    onError("Erro ao adicionar cartão")
-                }
-            } catch (e: Exception) {
-                onError("Erro de conexão: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun removerCartao(token: String, cartaoId: String) {
-        viewModelScope.launch {
-            try {
-                val response = carteiraApi.removerCartao("Bearer $token", cartaoId)
-                if (response.isSuccessful) {
-                    _cartoesSalvos.value = _cartoesSalvos.value.filter { it.id != cartaoId }
-                }
-            } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao remover cartão", e)
-            }
-        }
-    }
-
-    fun adicionarContaBancaria(
-        token: String,
-        request: ContaBancariaRequest,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val response = carteiraApi.adicionarContaBancaria("Bearer $token", request)
-                if (response.isSuccessful && response.body() != null) {
-                    _contasBancarias.value = _contasBancarias.value + response.body()!!
-                    onSuccess()
-                } else {
-                    onError("Erro ao adicionar conta bancária")
-                }
-            } catch (e: Exception) {
-                onError("Erro de conexão: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun removerContaBancaria(token: String, contaId: String) {
-        viewModelScope.launch {
-            try {
-                val response = carteiraApi.removerContaBancaria("Bearer $token", contaId)
-                if (response.isSuccessful) {
-                    _contasBancarias.value = _contasBancarias.value.filter { it.id != contaId }
-                }
-            } catch (e: Exception) {
-                Log.e("CarteiraViewModel", "Erro ao remover conta bancária", e)
-            }
-        }
-    }
-
-    fun limparErro() {
-        _error.value = null
-    }
-
-    fun adicionarContaBancariaLocal(
-        banco: String,
-        agencia: String,
-        conta: String,
-        tipoConta: String,
-        nomeCompleto: String,
-        cpf: String,
-        isPrincipal: Boolean
-    ) {
-        val novaConta = ContaBancaria(
-            id = "CONTA_${System.currentTimeMillis()}",
-            banco = banco,
-            agencia = agencia,
-            conta = conta,
-            tipoConta = tipoConta,
-            nomeCompleto = nomeCompleto,
-            cpf = cpf,
-            isPrincipal = isPrincipal
-        )
-
-        // Se for principal, remove a flag das outras
-        val contasAtualizadas = if (isPrincipal) {
-            _contasBancarias.value.map { it.copy(isPrincipal = false) } + novaConta
-        } else {
-            _contasBancarias.value + novaConta
-        }
-
-        _contasBancarias.value = contasAtualizadas
-
-        Log.d("CarteiraViewModel", "✅ Conta bancária adicionada: $banco - Ag: $agencia - Conta: $conta")
-        Log.d("CarteiraViewModel", "✅ Total de contas: ${_contasBancarias.value.size}")
     }
 }
 

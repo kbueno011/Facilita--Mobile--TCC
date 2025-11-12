@@ -185,11 +185,13 @@ fun TelaCriarServicoCategoria(
 
                 loading = false
                 if (response.isSuccessful && response.body() != null) {
-                    Toast.makeText(context, "Serviço criado com sucesso!", Toast.LENGTH_SHORT).show()
+                    val servicoResponse = response.body()
+                    Toast.makeText(context, "Serviço criado com sucesso! Prossiga para o pagamento.", Toast.LENGTH_SHORT).show()
 
-                    // Navegar para tela de aguardo do serviço
-                    val servicoId = "novo_${System.currentTimeMillis()}"
-                    navController.navigate("tela_aguardo_servico/$servicoId/$origemEndereco/$destinoEndereco") {
+                    // Navegar para tela de pagamento do serviço
+                    val servicoId = servicoResponse?.data?.servico?.id?.toString() ?: "novo_${System.currentTimeMillis()}"
+                    val valorServico = servicoResponse?.data?.servico?.valor?.toDoubleOrNull() ?: 25.0
+                    navController.navigate("tela_pagamento_servico/$servicoId/$valorServico/$origemEndereco/$destinoEndereco") {
                         popUpTo("tela_home") { inclusive = false }
                     }
                 } else {

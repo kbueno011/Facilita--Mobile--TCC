@@ -76,18 +76,8 @@ fun TelaAguardoServico(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF0D1F1A),
-                        Color(0xFF1A2F28),
-                        Color(0xFF0D1F1A)
-                    )
-                )
-            )
+            .background(Color(0xFFF5F5F7))
     ) {
-        // Fundo animado com partículas
-        FundoAnimado()
 
         Column(
             modifier = Modifier
@@ -105,12 +95,12 @@ fun TelaAguardoServico(
                     onClick = { mostrarDialogoCancelar = true },
                     modifier = Modifier
                         .size(44.sdp())
-                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .background(Color(0xFF00B14F).copy(alpha = 0.1f), CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Voltar",
-                        tint = Color.White,
+                        tint = Color(0xFF00B14F),
                         modifier = Modifier.size(24.sdp())
                     )
                 }
@@ -119,19 +109,19 @@ fun TelaAguardoServico(
                     text = "Pedido #$pedidoId",
                     fontSize = 16.ssp(),
                     fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = Color(0xFF2D2D2D)
                 )
 
                 IconButton(
                     onClick = { /* Ajuda */ },
                     modifier = Modifier
                         .size(44.sdp())
-                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .background(Color(0xFF00B14F).copy(alpha = 0.1f), CircleShape)
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Help,
                         contentDescription = "Ajuda",
-                        tint = Color.White,
+                        tint = Color(0xFF00B14F),
                         modifier = Modifier.size(24.sdp())
                     )
                 }
@@ -261,7 +251,7 @@ private fun AnimacaoLoadingFuturista(status: StatusServico) {
     )
 
     val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
+        initialValue = 0.5f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = FastOutSlowInEasing),
@@ -285,9 +275,9 @@ private fun AnimacaoLoadingFuturista(status: StatusServico) {
             drawArc(
                 brush = Brush.sweepGradient(
                     listOf(
-                        Color(0xFF019D31).copy(alpha = alpha),
-                        Color(0xFF06C755).copy(alpha = 0.3f),
-                        Color(0xFF019D31).copy(alpha = alpha)
+                        Color(0xFF00B14F).copy(alpha = alpha),
+                        Color(0xFF3C604B).copy(alpha = 0.5f),
+                        Color(0xFF00B14F).copy(alpha = alpha)
                     )
                 ),
                 startAngle = 0f,
@@ -307,8 +297,8 @@ private fun AnimacaoLoadingFuturista(status: StatusServico) {
                 brush = Brush.radialGradient(
                     listOf(
                         Color.Transparent,
-                        Color(0xFF019D31).copy(alpha = 0.1f),
-                        Color(0xFF06C755).copy(alpha = 0.3f)
+                        Color(0xFF00B14F).copy(alpha = 0.1f),
+                        Color(0xFF00B14F).copy(alpha = 0.3f)
                     )
                 ),
                 radius = size.minDimension / 2
@@ -322,8 +312,8 @@ private fun AnimacaoLoadingFuturista(status: StatusServico) {
                 .background(
                     brush = Brush.radialGradient(
                         listOf(
-                            Color(0xFF019D31),
-                            Color(0xFF01802A)
+                            Color(0xFF00B14F),
+                            Color(0xFF3C604B)
                         )
                     ),
                     shape = CircleShape
@@ -331,7 +321,7 @@ private fun AnimacaoLoadingFuturista(status: StatusServico) {
                 .border(
                     width = 3.sdp(),
                     brush = Brush.linearGradient(
-                        listOf(Color(0xFF06C755), Color(0xFF019D31))
+                        listOf(Color(0xFF00B14F), Color(0xFF3C604B))
                     ),
                     shape = CircleShape
                 ),
@@ -400,7 +390,7 @@ private fun StatusTexto(status: StatusServico, tempoEstimado: Int) {
             },
             fontSize = 26.ssp(),
             fontWeight = FontWeight.ExtraBold,
-            color = Color.White,
+            color = Color(0xFF2D2D2D),
             textAlign = TextAlign.Center
         )
 
@@ -415,14 +405,14 @@ private fun StatusTexto(status: StatusServico, tempoEstimado: Int) {
                     StatusServico.CHEGOU -> ""
                 },
                 fontSize = 15.ssp(),
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color(0xFF6D6D6D),
                 textAlign = TextAlign.Center
             )
         } else if (status == StatusServico.CHEGOU) {
             Text(
                 text = "O prestador está no local",
                 fontSize = 15.ssp(),
-                color = Color(0xFF06C755),
+                color = Color(0xFF00B14F),
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold
             )
@@ -446,9 +436,9 @@ private fun CardPrestador(nome: String, avaliacao: Float, statusAtual: StatusSer
             .scale(scale),
         shape = RoundedCornerShape(20.sdp()),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.12f)
+            containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(0.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -462,11 +452,11 @@ private fun CardPrestador(nome: String, avaliacao: Float, statusAtual: StatusSer
                     .size(64.sdp())
                     .background(
                         brush = Brush.linearGradient(
-                            listOf(Color(0xFF019D31), Color(0xFF06C755))
+                            listOf(Color(0xFF3C604B), Color(0xFF00B14F))
                         ),
                         shape = CircleShape
                     )
-                    .border(3.sdp(), Color.White.copy(alpha = 0.3f), CircleShape),
+                    .border(3.sdp(), Color(0xFF00B14F).copy(alpha = 0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -484,7 +474,7 @@ private fun CardPrestador(nome: String, avaliacao: Float, statusAtual: StatusSer
                     text = nome,
                     fontSize = 18.ssp(),
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color(0xFF2D2D2D)
                 )
                 Spacer(modifier = Modifier.height(4.sdp()))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -498,7 +488,7 @@ private fun CardPrestador(nome: String, avaliacao: Float, statusAtual: StatusSer
                     Text(
                         text = avaliacao.toString(),
                         fontSize = 14.ssp(),
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = Color(0xFF6D6D6D)
                     )
                 }
             }
@@ -509,7 +499,7 @@ private fun CardPrestador(nome: String, avaliacao: Float, statusAtual: StatusSer
                     onClick = { /* Ligar */ },
                     modifier = Modifier
                         .size(44.sdp())
-                        .background(Color(0xFF019D31), CircleShape)
+                        .background(Color(0xFF00B14F), CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Phone,
@@ -525,7 +515,7 @@ private fun CardPrestador(nome: String, avaliacao: Float, statusAtual: StatusSer
                     onClick = { /* Chat */ },
                     modifier = Modifier
                         .size(44.sdp())
-                        .background(Color(0xFF019D31), CircleShape)
+                        .background(Color(0xFF00B14F), CircleShape)
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Message,
@@ -545,9 +535,9 @@ private fun CardPercurso(origem: String, destino: String) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.sdp()),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.12f)
+            containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(0.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -558,7 +548,7 @@ private fun CardPercurso(origem: String, destino: String) {
                 text = "Percurso",
                 fontSize = 16.ssp(),
                 fontWeight = FontWeight.Bold,
-                color = Color.White.copy(alpha = 0.9f)
+                color = Color(0xFF2D2D2D)
             )
 
             Spacer(modifier = Modifier.height(16.sdp()))
@@ -568,19 +558,19 @@ private fun CardPercurso(origem: String, destino: String) {
                 Box(
                     modifier = Modifier
                         .size(12.sdp())
-                        .background(Color(0xFF06C755), CircleShape)
+                        .background(Color(0xFF00B14F), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(12.sdp()))
                 Column {
                     Text(
                         text = "Origem",
                         fontSize = 12.ssp(),
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = Color(0xFF6D6D6D)
                     )
                     Text(
                         text = origem,
                         fontSize = 14.ssp(),
-                        color = Color.White,
+                        color = Color(0xFF2D2D2D),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -592,7 +582,7 @@ private fun CardPercurso(origem: String, destino: String) {
                     .padding(start = 5.sdp())
                     .width(2.sdp())
                     .height(24.sdp())
-                    .background(Color.White.copy(alpha = 0.3f))
+                    .background(Color(0xFFE0E0E0))
             )
 
             // Destino
@@ -607,12 +597,12 @@ private fun CardPercurso(origem: String, destino: String) {
                     Text(
                         text = "Destino",
                         fontSize = 12.ssp(),
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = Color(0xFF6D6D6D)
                     )
                     Text(
                         text = destino,
                         fontSize = 14.ssp(),
-                        color = Color.White,
+                        color = Color(0xFF2D2D2D),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -623,18 +613,18 @@ private fun CardPercurso(origem: String, destino: String) {
 
 @Composable
 private fun BotaoCancelar(onClick: () -> Unit, enabled: Boolean) {
-    Button(
+    OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(56.sdp()),
         shape = RoundedCornerShape(50),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White.copy(alpha = 0.15f),
-            disabledContainerColor = Color.Gray.copy(alpha = 0.3f)
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = Color(0xFFFF6B6B),
+            disabledContentColor = Color.Gray
         ),
-        border = BorderStroke(2.sdp(), Color.White.copy(alpha = 0.3f))
+        border = BorderStroke(2.sdp(), if (enabled) Color(0xFFFF6B6B) else Color.Gray)
     ) {
         Icon(
             Icons.Default.Cancel,
@@ -647,7 +637,7 @@ private fun BotaoCancelar(onClick: () -> Unit, enabled: Boolean) {
             text = if (enabled) "Cancelar Pedido" else "Não é possível cancelar",
             fontSize = 16.ssp(),
             fontWeight = FontWeight.Bold,
-            color = if (enabled) Color.White else Color.Gray
+            color = if (enabled) Color(0xFFFF6B6B) else Color.Gray
         )
     }
 }
@@ -656,14 +646,14 @@ private fun BotaoCancelar(onClick: () -> Unit, enabled: Boolean) {
 private fun DialogoCancelamento(onDismiss: () -> Unit, onConfirmar: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A2F28),
+        containerColor = Color.White,
         shape = RoundedCornerShape(24.sdp()),
         title = {
             Text(
                 text = "Cancelar pedido?",
                 fontSize = 20.ssp(),
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color(0xFF2D2D2D)
             )
         },
         text = {
@@ -671,13 +661,13 @@ private fun DialogoCancelamento(onDismiss: () -> Unit, onConfirmar: () -> Unit) 
                 Text(
                     text = "Tem certeza que deseja cancelar este pedido?",
                     fontSize = 15.ssp(),
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = Color(0xFF6D6D6D)
                 )
                 Spacer(modifier = Modifier.height(8.sdp()))
                 Text(
                     text = "Esta ação não poderá ser desfeita.",
                     fontSize = 13.ssp(),
-                    color = Color(0xFFFF6B6B).copy(alpha = 0.9f)
+                    color = Color(0xFFFF6B6B)
                 )
             }
         },

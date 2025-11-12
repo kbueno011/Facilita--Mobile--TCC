@@ -833,13 +833,14 @@ private fun enviarServicoParaAPI(
                 Log.d("API_DEBUG", "Serviço criado com sucesso! ID: ${servico?.id}")
                 Toast.makeText(
                     context,
-                    "Serviço criado com sucesso!",
+                    "Serviço criado com sucesso! Prossiga para o pagamento.",
                     Toast.LENGTH_SHORT
                 ).show()
 
-                // Navegar para tela de aguardo do serviço
+                // Navegar para tela de pagamento do serviço
                 val pedidoId = servico?.id?.toString() ?: "novo"
-                navController.navigate("tela_aguardo_servico/$pedidoId/$origemEndereco/$destinoEndereco") {
+                val valorServico = servico?.valor ?: 25.0 // Valor padrão ou obtido da resposta
+                navController.navigate("tela_pagamento_servico/$pedidoId/$valorServico/$origemEndereco/$destinoEndereco") {
                     popUpTo("tela_home") { inclusive = false }
                 }
             } else {
