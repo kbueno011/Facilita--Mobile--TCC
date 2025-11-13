@@ -65,7 +65,7 @@ interface UserService {
     suspend fun criarServico(
         @Header("Authorization") authToken: String,
         @Body request: ServicoRequest
-    ): Response<ServicoResponse>
+    ): Response<CriarServicoResponse>
 
     @Headers("Content-Type: application/json")
     @POST("v1/facilita/servico/from-categoria/{id_categoria}")

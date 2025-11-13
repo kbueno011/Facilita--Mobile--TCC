@@ -78,9 +78,9 @@ fun TelaAguardoServico(
                 // Continua aguardando até iniciar
             }
             "EM_ANDAMENTO" -> {
-                Log.d("TelaAguardo", "🚀 Serviço iniciado! Navegando para rastreamento...")
+                Log.d("TelaAguardo", "🚀 Serviço iniciado! Navegando para corrida em andamento...")
                 delay(1000)
-                navController.navigate("tela_rastreamento_servico/$servicoId") {
+                navController.navigate("tela_corrida_andamento/$servicoId") {
                     popUpTo("tela_home") { inclusive = false }
                 }
             }

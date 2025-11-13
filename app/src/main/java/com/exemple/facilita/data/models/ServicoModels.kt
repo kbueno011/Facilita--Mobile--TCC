@@ -193,4 +193,51 @@ data class ServicoResponse(
     val message: String?
 )
 
+// Response de busca por status (com paginação)
+data class ServicosPorStatusResponse(
+    @SerializedName("status_code")
+    val statusCode: Int,
+    @SerializedName("data")
+    val data: ServicosPorStatusData?
+)
+
+data class ServicosPorStatusData(
+    @SerializedName("pedidos")
+    val pedidos: List<ServicoPedido>?,
+    @SerializedName("paginacao")
+    val paginacao: Paginacao?
+)
+
+data class ServicoPedido(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("descricao")
+    val descricao: String?,
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("valor")
+    val valor: Double,
+    @SerializedName("data_solicitacao")
+    val dataSolicitacao: String?,
+    @SerializedName("data_conclusao")
+    val dataConclusao: String?,
+    @SerializedName("categoria")
+    val categoria: Categoria?,
+    @SerializedName("localizacao")
+    val localizacao: Localizacao?,
+    @SerializedName("prestador")
+    val prestador: PrestadorInfo?
+)
+
+data class Paginacao(
+    @SerializedName("pagina_atual")
+    val paginaAtual: Int,
+    @SerializedName("total_paginas")
+    val totalPaginas: Int,
+    @SerializedName("total_pedidos")
+    val totalPedidos: Int,
+    @SerializedName("por_pagina")
+    val porPagina: Int
+)
+
 

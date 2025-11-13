@@ -43,22 +43,34 @@ class ServicoViewModel(application: Application) : AndroidViewModel(application)
     // Inicia o polling para verificar status do serviço
     fun iniciarMonitoramento(token: String, servicoId: String) {
         pollingJob?.cancel()
+
+        // Converte servicoId para Int com validação
+        val idServico = servicoId.toIntOrNull()
+        if (idServico == null || idServico == 0) {
+            _error.value = "ID do serviço inválido: $servicoId"
+            Log.e("ServicoViewModel", "❌ ID inválido recebido: '$servicoId'")
+            return
+        }
+
+        Log.d("ServicoViewModel", "🚀 Iniciando monitoramento do serviço ID: $idServico")
+
         pollingJob = viewModelScope.launch {
             while (isActive) {
                 try {
-                    buscarServicoPorId(token, servicoId.toIntOrNull() ?: 0)
+                    buscarServicoPorId(token, idServico)
 
-                    // Intervalo de 5 segundos entre requisições
-                    delay(5000)
+                    // Intervalo de 10 segundos entre requisições (conforme API)
+                    delay(10000)
 
                     // Para o polling se o serviço foi concluído ou cancelado
                     val status = _servico.value?.status
                     if (status == "CONCLUIDO" || status == "CANCELADO") {
+                        Log.d("ServicoViewModel", "⏹️ Parando monitoramento - Status final: $status")
                         break
                     }
                 } catch (e: Exception) {
                     Log.e("ServicoViewModel", "Erro no polling: ${e.message}", e)
-                    delay(5000) // Espera 5 segundos antes de tentar novamente
+                    delay(10000) // Espera 10 segundos antes de tentar novamente
                 }
             }
         }
@@ -70,44 +82,80 @@ class ServicoViewModel(application: Application) : AndroidViewModel(application)
         pollingJob = null
     }
 
-    // Busca serviço específico por ID
+    // Busca serviço específico por ID usando busca por status
     private suspend fun buscarServicoPorId(token: String, servicoId: Int) {
         try {
             Log.d("ServicoViewModel", "🔄 Buscando serviço ID: $servicoId")
 
-            // Busca todos os serviços do usuário
-            val response = apiService.meusServicos("Bearer $token")
+            // Lista de status possíveis para buscar (em ordem de prioridade)
+            val statusPossiveis = listOf("EM_ANDAMENTO", "ACEITO", "PENDENTE", "AGUARDANDO")
+            var servicoEncontrado: com.exemple.facilita.data.models.ServicoPedido? = null
 
-            if (response.isSuccessful && response.body()?.statusCode == 200) {
-                val servicos = response.body()?.data
+            // Tenta buscar em cada status até encontrar o serviço
+            for (status in statusPossiveis) {
+                try {
+                    val response = apiService.buscarServicosPorStatus("Bearer $token", status)
 
-                // Encontra o serviço específico
-                val servicoEncontrado = servicos?.find { it.id == servicoId }
+                    if (response.isSuccessful && response.body()?.statusCode == 200) {
+                        val pedidos = response.body()?.data?.pedidos
 
-                if (servicoEncontrado != null) {
-                    _servico.value = servicoEncontrado
-                    _error.value = null
+                        // Procura o serviço específico pelo ID
+                        servicoEncontrado = pedidos?.find { it.id == servicoId }
 
-                    Log.d("ServicoViewModel", "✅ Serviço atualizado: Status=${servicoEncontrado.status}")
-
-                    // Log da localização do prestador se existir
-                    servicoEncontrado.prestador?.let { prestador ->
-                        if (prestador.latitudeAtual != null && prestador.longitudeAtual != null) {
-                            Log.d("ServicoViewModel", "📍 Prestador em: ${prestador.latitudeAtual}, ${prestador.longitudeAtual}")
+                        if (servicoEncontrado != null) {
+                            Log.d("ServicoViewModel", "✅ Serviço encontrado com status: $status")
+                            break
                         }
                     }
-                } else {
-                    _error.value = "Serviço não encontrado"
-                    Log.e("ServicoViewModel", "❌ Serviço ID $servicoId não encontrado na lista")
+                } catch (e: Exception) {
+                    Log.w("ServicoViewModel", "⚠️ Erro ao buscar status $status: ${e.message}")
+                    continue
+                }
+            }
+
+            if (servicoEncontrado != null) {
+                // Converte ServicoPedido para Servico
+                _servico.value = converterParaServico(servicoEncontrado)
+                _error.value = null
+
+                Log.d("ServicoViewModel", "✅ Serviço atualizado: Status=${servicoEncontrado.status}")
+
+                // Log da localização do prestador se existir
+                servicoEncontrado.prestador?.let { prestador ->
+                    if (prestador.latitudeAtual != null && prestador.longitudeAtual != null) {
+                        Log.d("ServicoViewModel", "📍 Prestador em: ${prestador.latitudeAtual}, ${prestador.longitudeAtual}")
+                    }
                 }
             } else {
-                _error.value = "Erro ao buscar serviço: ${response.code()}"
-                Log.e("ServicoViewModel", "❌ Erro na resposta: ${response.code()} - ${response.message()}")
+                _error.value = "Serviço não encontrado"
+                Log.e("ServicoViewModel", "❌ Serviço ID $servicoId não encontrado em nenhum status")
             }
         } catch (e: Exception) {
             _error.value = "Erro de conexão: ${e.message}"
             Log.e("ServicoViewModel", "❌ Exceção ao buscar serviço", e)
         }
+    }
+
+    // Converte ServicoPedido para Servico
+    private fun converterParaServico(pedido: com.exemple.facilita.data.models.ServicoPedido): com.exemple.facilita.data.models.Servico {
+        return com.exemple.facilita.data.models.Servico(
+            id = pedido.id,
+            idContratante = 0, // Não disponível no ServicoPedido
+            idPrestador = pedido.prestador?.id,
+            idCategoria = pedido.categoria?.id ?: 0,
+            descricao = pedido.descricao,
+            status = pedido.status,
+            dataSolicitacao = pedido.dataSolicitacao,
+            dataConclusao = pedido.dataConclusao,
+            dataConfirmacao = null,
+            valor = pedido.valor.toString(),
+            tempoEstimado = null,
+            dataInicio = null,
+            contratante = null,
+            prestador = pedido.prestador,
+            categoria = pedido.categoria,
+            localizacao = pedido.localizacao
+        )
     }
 
     // Cancelar serviço

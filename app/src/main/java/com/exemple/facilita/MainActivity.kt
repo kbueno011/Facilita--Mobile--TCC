@@ -193,5 +193,18 @@ fun AppNavHost(navController: NavHostController) {
             )
         }
 
+        // Tela de corrida em andamento (tempo real)
+        composable(
+            route = "tela_corrida_andamento/{servicoId}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaCorridaEmAndamento(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: ""
+            )
+        }
+
     }
 }

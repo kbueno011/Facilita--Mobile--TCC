@@ -22,13 +22,7 @@ data class ParadaServico(
 data class ServicoCategoriaResponse(
     val status_code: Int,
     val message: String,
-    val data: ServicoCategoriaData
-)
-
-data class ServicoCategoriaData(
-    val servico: ServicoDetalhado,
-    val categoria: CategoriaDetalhada,
-    val detalhes_calculo: DetalhesCalculo
+    val data: ServicoDetalhado  // A API retorna o serviço diretamente em data
 )
 
 data class ServicoDetalhado(
@@ -39,7 +33,10 @@ data class ServicoDetalhado(
     val descricao: String,
     val status: String,
     val data_solicitacao: String,
-    val valor: String
+    val valor: String,
+    val categoria: CategoriaDetalhada?,
+    val detalhes_valor: DetalhesCalculo?,
+    val paradas: List<ParadaServico>?
 )
 
 data class CategoriaDetalhada(

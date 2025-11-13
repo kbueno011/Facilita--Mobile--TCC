@@ -829,8 +829,12 @@ private fun enviarServicoParaAPI(
             onLoadingChange(false)
 
             if (response.isSuccessful) {
-                val servico = response.body()
-                Log.d("API_DEBUG", "Serviço criado com sucesso! ID: ${servico?.id}")
+                val apiResponse = response.body()
+                Log.d("API_DEBUG", "✅ Resposta completa: $apiResponse")
+                Log.d("API_DEBUG", "📦 Data: ${apiResponse?.data}")
+                Log.d("API_DEBUG", "🆔 Serviço criado com sucesso! ID: ${apiResponse?.data?.id}")
+                Log.d("API_DEBUG", "💰 Valor: ${apiResponse?.data?.valor}")
+
                 Toast.makeText(
                     context,
                     "Serviço criado com sucesso! Prossiga para o pagamento.",
@@ -838,8 +842,18 @@ private fun enviarServicoParaAPI(
                 ).show()
 
                 // Navegar para tela de pagamento do serviço
-                val pedidoId = servico?.id?.toString() ?: "novo"
-                val valorServico = servico?.valor ?: 25.0 // Valor padrão ou obtido da resposta
+                // CORREÇÃO: A API retorna { status_code, message, data: { id, valor, ... } }
+                val pedidoId = apiResponse?.data?.id?.toString() ?: "0"
+                val valorServico = apiResponse?.data?.valor?.toDoubleOrNull() ?: 25.0
+
+                Log.d("API_DEBUG", "🔢 ID convertido: '$pedidoId'")
+
+                if (pedidoId == "0") {
+                    Log.e("API_DEBUG", "❌ ERRO: ID do serviço não foi retornado pela API!")
+                    Toast.makeText(context, "Erro: Serviço criado mas ID não retornado", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
                 navController.navigate("tela_pagamento_servico/$pedidoId/$valorServico/$origemEndereco/$destinoEndereco") {
                     popUpTo("tela_home") { inclusive = false }
                 }

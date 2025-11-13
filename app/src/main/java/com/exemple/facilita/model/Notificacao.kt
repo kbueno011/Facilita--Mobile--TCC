@@ -30,6 +30,7 @@ enum class TipoNotificacao {
 /**
  * Prioridade da notificação
  */
+@Suppress("unused")
 enum class PrioridadeNotificacao {
     BAIXA,
     MEDIA,
@@ -40,6 +41,7 @@ enum class PrioridadeNotificacao {
 /**
  * Status de leitura da notificação
  */
+@Suppress("unused")
 enum class StatusNotificacao {
     NAO_LIDA,
     LIDA,
@@ -66,6 +68,7 @@ data class Notificacao(
     /**
      * Retorna o ícone apropriado baseado no tipo de notificação
      */
+    @Suppress("unused")
     fun obterIcone(): ImageVector {
         return icone ?: when (tipo) {
             TipoNotificacao.PEDIDO_ACEITO -> Icons.Default.CheckCircle
@@ -112,6 +115,7 @@ data class Notificacao(
     /**
      * Formata a data/hora da notificação de forma amigável
      */
+    @Suppress("unused")
     fun obterTempoDecorrido(): String {
         val agora = LocalDateTime.now()
         val diferenca = java.time.Duration.between(dataHora, agora)
@@ -138,6 +142,7 @@ data class AcaoNotificacao(
 /**
  * Resposta da API para notificações
  */
+@Suppress("unused")
 data class NotificacaoResponse(
     val notificacoes: List<Notificacao>,
     val totalNaoLidas: Int,

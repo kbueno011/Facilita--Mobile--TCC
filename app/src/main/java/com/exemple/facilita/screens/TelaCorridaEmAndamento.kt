@@ -1,5 +1,6 @@
 package com.exemple.facilita.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.exemple.facilita.service.WebSocketManager
 import com.exemple.facilita.utils.TokenManager
 import com.exemple.facilita.viewmodel.ServicoViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -41,21 +43,45 @@ fun TelaCorridaEmAndamento(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // Localização em tempo real via WebSocket
+    val localizacaoWebSocket by WebSocketManager.localizacaoAtual.collectAsState()
+
     var mostrarDetalhes by remember { mutableStateOf(false) }
 
     val token = TokenManager.obterToken(context) ?: ""
 
-    // Inicia o monitoramento
+    // Inicia o monitoramento via API (polling de 10 em 10 segundos)
     LaunchedEffect(servicoId) {
         if (token.isNotEmpty()) {
             viewModel.iniciarMonitoramento(token, servicoId)
         }
     }
 
-    // Para o monitoramento quando sai
+    // Conecta ao WebSocket quando o serviço está ativo
+    LaunchedEffect(servico?.id, servico?.status) {
+        servico?.let { servicoAtual ->
+            if (servicoAtual.status == "EM_ANDAMENTO" && servicoAtual.prestador != null) {
+                Log.d("TelaCorreda", "🔌 Conectando ao WebSocket...")
+
+                // Conecta como contratante
+                WebSocketManager.conectar(
+                    userId = servicoAtual.idContratante,
+                    userType = "contratante",
+                    userName = "Contratante"
+                )
+
+                // Entra na sala do serviço
+                WebSocketManager.entrarNaSala(servicoId)
+            }
+        }
+    }
+
+    // Para o monitoramento e desconecta WebSocket quando sai
     DisposableEffect(Unit) {
         onDispose {
             viewModel.pararMonitoramento()
+            WebSocketManager.desconectar()
+            Log.d("TelaCorreda", "🔌 WebSocket desconectado")
         }
     }
 
@@ -83,6 +109,7 @@ fun TelaCorridaEmAndamento(
         servico?.let { servicoAtual ->
             MapaCorridaEmAndamento(
                 servico = servicoAtual,
+                localizacaoWebSocket = localizacaoWebSocket,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -132,16 +159,25 @@ fun TelaCorridaEmAndamento(
 @Composable
 private fun MapaCorridaEmAndamento(
     servico: com.exemple.facilita.data.models.Servico,
+    localizacaoWebSocket: com.exemple.facilita.service.LocalizacaoWebSocket?,
     modifier: Modifier = Modifier
 ) {
     val prestador = servico.prestador
     val localizacao = servico.localizacao
 
-    // Usa localização do prestador se disponível, senão usa localização do serviço
-    val latPrestador = prestador?.latitudeAtual ?: localizacao?.latitude ?: -23.550520
-    val lonPrestador = prestador?.longitudeAtual ?: localizacao?.longitude ?: -46.633308
+    // Usa localização do WebSocket se disponível (tempo real), senão usa da API
+    val latPrestador = localizacaoWebSocket?.latitude
+        ?: prestador?.latitudeAtual
+        ?: localizacao?.latitude
+        ?: -23.550520
+    val lonPrestador = localizacaoWebSocket?.longitude
+        ?: prestador?.longitudeAtual
+        ?: localizacao?.longitude
+        ?: -46.633308
 
-    val posicaoPrestador = LatLng(latPrestador, lonPrestador)
+    val posicaoPrestador = remember(latPrestador, lonPrestador) {
+        LatLng(latPrestador, lonPrestador)
+    }
 
     // Por enquanto usa um ponto próximo como destino
     // TODO: Quando tiver destino na API, usar os valores corretos
@@ -151,7 +187,7 @@ private fun MapaCorridaEmAndamento(
         position = CameraPosition.fromLatLngZoom(posicaoPrestador, 16f)
     }
 
-    // Atualiza câmera seguindo o prestador
+    // Atualiza câmera seguindo o prestador em tempo real
     LaunchedEffect(latPrestador, lonPrestador) {
         cameraPositionState.animate(
             CameraUpdateFactory.newLatLngZoom(posicaoPrestador, 16f),
@@ -175,17 +211,20 @@ private fun MapaCorridaEmAndamento(
             zoomGesturesEnabled = true
         )
     ) {
-        // Marcador do prestador (carro em movimento)
+        // Marcador do prestador (carro em movimento) - atualizado em tempo real
         Marker(
-            state = MarkerState(position = posicaoPrestador),
-            title = prestador?.usuario?.nome ?: prestador?.nome ?: "Prestador",
+            state = rememberMarkerState(position = posicaoPrestador),
+            title = localizacaoWebSocket?.prestadorName
+                ?: prestador?.usuario?.nome
+                ?: prestador?.nome
+                ?: "Prestador",
             snippet = "Em movimento",
             icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
         )
 
         // Marcador do destino
         Marker(
-            state = MarkerState(position = posicaoDestino),
+            state = rememberMarkerState(position = posicaoDestino),
             title = "Destino",
             snippet = localizacao?.endereco ?: "Local de destino",
             icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
