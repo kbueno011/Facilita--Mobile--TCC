@@ -92,10 +92,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-
-
-
-
+    // Google Maps Directions API e Utils para desenhar rotas
+    implementation("com.google.maps.android:android-maps-utils:3.8.2")
+    implementation("com.google.maps:google-maps-services:2.2.0")
 
 }
 

@@ -70,28 +70,31 @@ fun TelaAguardoServico(
         tempoEstimado = viewModel.calcularTempoEstimado()
     }
 
-    // Navega para tela de rastreamento quando aceito/iniciado
+    // Navega para tela de rastreamento quando aceito
     LaunchedEffect(servico?.status) {
         when (servico?.status) {
             "ACEITO" -> {
-                Log.d("TelaAguardo", "✅ Prestador aceitou o serviço!")
-                // Continua aguardando até iniciar
+                Log.d("TelaAguardo", "✅ Prestador aceitou o serviço! Navegando para rastreamento...")
+                delay(1500) // Aguarda 1.5s para o usuário ver a confirmação
+                navController.navigate("tela_rastreamento_servico/$servicoId") {
+                    popUpTo("tela_aguardo_servico/$servicoId") { inclusive = true }
+                }
             }
             "EM_ANDAMENTO" -> {
-                Log.d("TelaAguardo", "🚀 Serviço iniciado! Navegando para corrida em andamento...")
-                delay(1000)
-                navController.navigate("tela_corrida_andamento/$servicoId") {
-                    popUpTo("tela_home") { inclusive = false }
+                Log.d("TelaAguardo", "🚀 Serviço em andamento! Navegando para rastreamento...")
+                delay(500)
+                navController.navigate("tela_rastreamento_servico/$servicoId") {
+                    popUpTo("tela_aguardo_servico/$servicoId") { inclusive = true }
                 }
             }
             "CONCLUIDO" -> {
-                Toast.makeText(context, "Serviço concluído!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "✅ Serviço concluído!", Toast.LENGTH_SHORT).show()
                 navController.navigate("tela_home") {
                     popUpTo("tela_home") { inclusive = true }
                 }
             }
             "CANCELADO" -> {
-                Toast.makeText(context, "Serviço cancelado", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "❌ Serviço cancelado", Toast.LENGTH_SHORT).show()
                 navController.navigate("tela_home") {
                     popUpTo("tela_home") { inclusive = true }
                 }

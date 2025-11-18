@@ -1,7 +1,93 @@
+            color = Color(0xFF2D2D2D),
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
 package com.exemple.facilita.screens
+@Composable
+fun InfoSection(
+    title: String,
+    icon: ImageVector,
+    items: List<InfoItem>
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(Color(0xFF019D31).copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = Color(0xFF019D31),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2D2D2D)
+            )
+        }
 
-import android.content.Intent
-import android.net.Uri
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFF5F5F5))
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items.forEach { item ->
+                InfoItemRow(item)
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoItemRow(item: InfoItem) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = item.label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF6D6D6D),
+            modifier = Modifier.weight(0.4f)
+        )
+        Text(
+            text = item.value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF2D2D2D),
+            textAlign = TextAlign.End,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(0.6f)
+        )
+    }
+}
+
+data class InfoItem(
+    val label: String,
+    val value: String
+)
+
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.*
@@ -26,6 +112,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,15 +120,12 @@ import androidx.navigation.NavController
 import com.exemple.facilita.network.WebSocketManager
 import com.exemple.facilita.utils.TokenManager
 import com.exemple.facilita.viewmodel.ServicoViewModel
-import com.exemple.facilita.network.DirectionsService
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,21 +145,14 @@ fun TelaRastreamentoServico(
     var mostrarDialogoCancelar by remember { mutableStateOf(false) }
     var mostrarDetalhes by remember { mutableStateOf(false) }
 
-    // WebSocket Manager para rastreamento em tempo real
+    // WebSocket Manager
     val webSocketManager = remember { WebSocketManager.getInstance() }
     val isSocketConnected by webSocketManager.isConnected.collectAsState()
     val locationUpdate by webSocketManager.locationUpdate.collectAsState()
 
-    // Posições no mapa - com atualização do WebSocket em tempo real
+    // Posições no mapa - com atualização do WebSocket
     var prestadorLat by remember { mutableStateOf(servico?.prestador?.latitudeAtual ?: -23.550520) }
     var prestadorLng by remember { mutableStateOf(servico?.prestador?.longitudeAtual ?: -46.633308) }
-
-    // Estado para a rota
-    var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
-    var distanciaTexto by remember { mutableStateOf("") }
-    var duracaoTexto by remember { mutableStateOf("") }
-
-    val coroutineScope = rememberCoroutineScope()
 
     // Atualiza posição quando recebe do WebSocket
     LaunchedEffect(locationUpdate) {
@@ -83,7 +160,7 @@ fun TelaRastreamentoServico(
             if (update.servicoId.toString() == servicoId) {
                 prestadorLat = update.latitude
                 prestadorLng = update.longitude
-                Log.d("TelaRastreamento", "📍 Posição atualizada via WebSocket: ${update.latitude}, ${update.longitude}")
+                Log.d("TelaRastreamento", "Posição atualizada via WebSocket: ${update.latitude}, ${update.longitude}")
             }
         }
     }
@@ -98,37 +175,31 @@ fun TelaRastreamentoServico(
         position = CameraPosition.fromLatLngZoom(prestadorPos, 15f)
     }
 
-    // Conecta ao WebSocket automaticamente
+    // Conecta ao WebSocket
     LaunchedEffect(servicoId, userId) {
         if (userId > 0) {
-            Log.d("TelaRastreamento", "🔌 Conectando ao WebSocket...")
             webSocketManager.connect(
                 userId = userId,
                 userType = "contratante",
                 userName = TokenManager.obterNomeUsuario(context) ?: "Usuário"
             )
-            delay(1000) // Aguarda conexão estabilizar
+            delay(1000) // Aguarda conexão
             webSocketManager.joinServico(servicoId)
-            Log.d("TelaRastreamento", "✅ Entrou na sala do serviço: $servicoId")
         }
     }
 
-    // Inicia o monitoramento via API (apenas uma vez)
-    LaunchedEffect(Unit) {
-        if (token.isNotEmpty() && servicoId.isNotEmpty()) {
-            Log.d("TelaRastreamento", "🔍 Iniciando monitoramento do serviço #$servicoId")
+    // Inicia o monitoramento via API
+    LaunchedEffect(servicoId) {
+        if (token.isNotEmpty()) {
             viewModel.iniciarMonitoramento(token, servicoId)
         }
     }
 
-    // Monitora mudanças de status (apenas CONCLUIDO e CANCELADO)
+    // Monitora mudanças de status
     LaunchedEffect(servico?.status) {
-        val status = servico?.status
-        Log.d("TelaRastreamento", "📊 Status atual: $status")
-
-        when (status) {
+        when (servico?.status) {
             "CONCLUIDO" -> {
-                Toast.makeText(context, "✅ Serviço concluído com sucesso!", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Serviço concluído com sucesso!", Toast.LENGTH_LONG).show()
                 webSocketManager.disconnect()
                 delay(2000)
                 navController.navigate("tela_home") {
@@ -136,70 +207,31 @@ fun TelaRastreamentoServico(
                 }
             }
             "CANCELADO" -> {
-                Toast.makeText(context, "❌ Serviço cancelado", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Serviço cancelado", Toast.LENGTH_SHORT).show()
                 webSocketManager.disconnect()
-                delay(500)
                 navController.navigate("tela_home") {
                     popUpTo("tela_home") { inclusive = true }
                 }
             }
-            "ACEITO", "EM_ANDAMENTO" -> {
-                // Mantém na tela de rastreamento - não navega
-                Log.d("TelaRastreamento", "✅ Serviço ativo - permanecendo na tela")
-            }
         }
     }
 
-    // Busca a rota quando as posições mudam
-    LaunchedEffect(prestadorLat, prestadorLng, destinoLat, destinoLng) {
-        coroutineScope.launch {
-            Log.d("TelaRastreamento", "🗺️ Buscando rota atualizada...")
-            val route = DirectionsService.getRoute(
-                origin = LatLng(prestadorLat, prestadorLng),
-                destination = LatLng(destinoLat, destinoLng)
-            )
-
-            route?.let {
-                routePoints = it.points
-                distanciaTexto = it.distanceText
-                duracaoTexto = it.durationText
-                Log.d("TelaRastreamento", "✅ Rota atualizada: ${it.points.size} pontos, ${it.distanceText}, ${it.durationText}")
-
-                // Ajusta a câmera para mostrar a rota completa
-                if (it.points.isNotEmpty()) {
-                    val boundsBuilder = LatLngBounds.Builder()
-                    it.points.forEach { point -> boundsBuilder.include(point) }
-                    val bounds = boundsBuilder.build()
-                    cameraPositionState.animate(
-                        update = CameraUpdateFactory.newLatLngBounds(bounds, 100),
-                        durationMs = 1500
-                    )
-                }
-            }
-        }
-    }
-
-    // Atualiza câmera suavemente quando prestador se move (sem zoom out)
+    // Atualiza câmera quando prestador se move
     LaunchedEffect(prestadorLat, prestadorLng) {
-        if (routePoints.isEmpty()) {
-            // Se não tem rota ainda, apenas segue o prestador
-            cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLng(prestadorPos),
-                durationMs = 1000
-            )
-        }
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLng(prestadorPos),
+            durationMs = 1000
+        )
     }
 
-    // Limpa WebSocket ao sair da tela
+    // Limpa WebSocket ao sair
     DisposableEffect(Unit) {
         onDispose {
-            Log.d("TelaRastreamento", "🔌 Desconectando WebSocket...")
             webSocketManager.disconnect()
         }
     }
 
     val prestadorNome = servico?.prestador?.usuario?.nome ?: "Prestador"
-    val prestadorTelefone = servico?.prestador?.usuario?.telefone ?: ""
     val tempoEstimado = viewModel.calcularTempoEstimado()
 
     // Animação de pulse para o indicador de conexão
@@ -215,7 +247,7 @@ fun TelaRastreamentoServico(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Mapa com estilo melhorado e rota desenhada
+        // Mapa com estilo melhorado
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -228,47 +260,27 @@ fun TelaRastreamentoServico(
                 myLocationButtonEnabled = false,
                 compassEnabled = true,
                 scrollGesturesEnabled = true,
-                zoomGesturesEnabled = true,
-                rotationGesturesEnabled = true
+                zoomGesturesEnabled = true
             )
         ) {
-            // Desenha a rota (Polyline) estilo Uber
-            if (routePoints.isNotEmpty()) {
-                // Linha de fundo (mais grossa e escura)
-                Polyline(
-                    points = routePoints,
-                    color = Color(0xFF2D2D2D),
-                    width = 12f,
-                    geodesic = true
-                )
-
-                // Linha principal (verde vibrante)
-                Polyline(
-                    points = routePoints,
-                    color = Color(0xFF019D31),
-                    width = 8f,
-                    geodesic = true
-                )
-            }
-
-            // Marcador do prestador (VERDE) - Atualiza em tempo real via WebSocket
+            // Marcador do prestador (motorista)
             Marker(
                 state = MarkerState(position = prestadorPos),
                 title = prestadorNome,
-                snippet = if (isSocketConnected) "🟢 Ao vivo" else "⚪ Offline",
+                snippet = "Prestador - ${if (isSocketConnected) "Ao vivo" else "Offline"}",
                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
             )
 
-            // Marcador do destino (VERMELHO)
+            // Marcador do destino
             Marker(
                 state = MarkerState(position = destinoPos),
-                title = "📍 Destino",
+                title = "Destino",
                 snippet = servico?.localizacao?.endereco ?: "",
                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
             )
         }
 
-        // Header moderno com indicador de tempo real
+        // Header com indicador de tempo real
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -277,7 +289,7 @@ fun TelaRastreamentoServico(
                 .align(Alignment.TopCenter),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.96f)
+                containerColor = Color.White.copy(alpha = 0.95f)
             ),
             elevation = CardDefaults.cardElevation(12.dp)
         ) {
@@ -316,7 +328,7 @@ fun TelaRastreamentoServico(
                             color = Color(0xFF2D2D2D)
                         )
 
-                        // Indicador de conexão em tempo real PULSANTE
+                        // Indicador de conexão em tempo real
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
@@ -333,37 +345,16 @@ fun TelaRastreamentoServico(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isSocketConnected) "🟢 Ao vivo" else "🔴 Offline",
+                                text = if (isSocketConnected) "Ao vivo" else "Offline",
                                 fontSize = 11.sp,
                                 color = if (isSocketConnected) Color(0xFF019D31) else Color(0xFFFF0000),
                                 fontWeight = FontWeight.Medium
                             )
                         }
 
-                        // Mostra distância e tempo da rota em tempo real
-                        if (duracaoTexto.isNotEmpty()) {
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 2.dp)
-                            ) {
-                                Text(
-                                    text = "📍 $distanciaTexto",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF019D31),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "⏱️ $duracaoTexto",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF019D31),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        } else if (tempoEstimado > 0) {
+                        if (tempoEstimado > 0) {
                             Text(
-                                text = "⏱️ Chega em ~$tempoEstimado min",
+                                text = "Chega em ~$tempoEstimado min",
                                 fontSize = 13.sp,
                                 color = Color(0xFF019D31),
                                 fontWeight = FontWeight.SemiBold,
@@ -380,14 +371,14 @@ fun TelaRastreamentoServico(
                     ) {
                         Icon(
                             if (mostrarDetalhes) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = "Detalhes",
+                            contentDescription = "Mais detalhes",
                             tint = Color(0xFF019D31),
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 }
 
-                // Detalhes expandíveis (estilo Uber)
+                // Detalhes expandíveis
                 if (mostrarDetalhes) {
                     Spacer(modifier = Modifier.height(12.dp))
                     HorizontalDivider(color = Color(0xFFE0E0E0))
@@ -397,27 +388,28 @@ fun TelaRastreamentoServico(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        InfoRow(
+                        DetailRow(
                             icon = Icons.Default.Category,
                             label = "Categoria",
                             value = servico?.categoria?.nome ?: "N/A"
                         )
-                        InfoRow(
+                        DetailRow(
                             icon = Icons.Default.AttachMoney,
                             label = "Valor",
                             value = "R$ ${servico?.valor ?: "0,00"}"
                         )
-                        InfoRow(
+                        DetailRow(
                             icon = Icons.Default.LocationOn,
                             label = "Destino",
-                            value = servico?.localizacao?.endereco ?: "N/A"
+                            value = servico?.localizacao?.endereco ?: "N/A",
+                            maxLines = 2
                         )
                     }
                 }
             }
         }
 
-        // Card inferior estilo Uber com informações completas
+        // Card inferior com informações detalhadas do prestador
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -436,7 +428,7 @@ fun TelaRastreamentoServico(
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp)
             ) {
-                // Linha decorativa no topo (estilo Uber)
+                // Linha decorativa no topo
                 Box(
                     modifier = Modifier
                         .width(40.dp)
@@ -447,12 +439,12 @@ fun TelaRastreamentoServico(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Cabeçalho do prestador com borda gradiente
+                // Cabeçalho do prestador
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Avatar com borda gradiente verde
+                    // Avatar do prestador com borda gradiente
                     Box(
                         modifier = Modifier
                             .size(72.dp)
@@ -492,7 +484,7 @@ fun TelaRastreamentoServico(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Avaliação com 5 estrelas visuais
+                        // Avaliação com estrelas
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             repeat(5) { index ->
                                 Icon(
@@ -505,7 +497,7 @@ fun TelaRastreamentoServico(
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "${servico?.prestador?.avaliacao ?: "5.0"}",
+                                text = "${servico?.prestador?.avaliacao ?: "5.0"} (${servico?.prestador?.totalAvaliacoes ?: "0"})",
                                 fontSize = 13.sp,
                                 color = Color(0xFF6D6D6D),
                                 fontWeight = FontWeight.Medium
@@ -515,7 +507,7 @@ fun TelaRastreamentoServico(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         // Telefone do prestador
-                        if (prestadorTelefone.isNotEmpty()) {
+                        servico?.prestador?.usuario?.telefone?.let { telefone ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Default.Phone,
@@ -525,7 +517,7 @@ fun TelaRastreamentoServico(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = prestadorTelefone,
+                                    text = telefone,
                                     fontSize = 12.sp,
                                     color = Color(0xFF6D6D6D)
                                 )
@@ -536,32 +528,19 @@ fun TelaRastreamentoServico(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botões de ação (Ligar e Chat) lado a lado
+                // Botões de ação
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Botão LIGAR (funcional)
                     Button(
-                        onClick = {
-                            if (prestadorTelefone.isNotEmpty()) {
-                                val intent = Intent(Intent.ACTION_DIAL).apply {
-                                    data = Uri.parse("tel:$prestadorTelefone")
-                                }
-                                context.startActivity(intent)
-                            } else {
-                                Toast.makeText(context, "Telefone não disponível", Toast.LENGTH_SHORT).show()
-                            }
-                        },
+                        onClick = { /* Ligar */ },
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF019D31)
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 4.dp
                         )
                     ) {
                         Icon(
@@ -573,11 +552,8 @@ fun TelaRastreamentoServico(
                         Text("Ligar", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    // Botão Chat
                     OutlinedButton(
-                        onClick = {
-                            Toast.makeText(context, "Chat em breve!", Toast.LENGTH_SHORT).show()
-                        },
+                        onClick = { /* Chat */ },
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
@@ -603,14 +579,17 @@ fun TelaRastreamentoServico(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Informações do veículo (se disponível)
+                // Informações do veículo
                 servico?.prestador?.veiculo?.let { veiculo ->
-                    VeiculoSection(
-                        marca = veiculo.marca ?: "N/A",
-                        modelo = veiculo.modelo ?: "N/A",
-                        placa = veiculo.placa ?: "N/A",
-                        cor = veiculo.cor ?: "N/A",
-                        ano = veiculo.ano?.toString() ?: "N/A"
+                    InfoSection(
+                        title = "Veículo",
+                        icon = Icons.Default.DirectionsCar,
+                        items = listOf(
+                            InfoItem("Modelo", "${veiculo.marca} ${veiculo.modelo}"),
+                            InfoItem("Placa", veiculo.placa ?: "N/A"),
+                            InfoItem("Cor", veiculo.cor ?: "N/A"),
+                            InfoItem("Ano", veiculo.ano?.toString() ?: "N/A")
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -618,21 +597,27 @@ fun TelaRastreamentoServico(
                     Spacer(modifier = Modifier.height(20.dp))
                 }
 
-                // Detalhes do serviço
-                ServicoSection(
-                    status = when (servico?.status) {
-                        "EM_ANDAMENTO" -> "Em andamento"
-                        "CONCLUIDO" -> "Concluído"
-                        else -> "Aguardando"
-                    },
-                    categoria = servico?.categoria?.nome ?: "N/A",
-                    valor = "R$ ${servico?.valor ?: "0,00"}",
-                    descricao = servico?.descricao
+                // Informações do serviço
+                InfoSection(
+                    title = "Detalhes do Serviço",
+                    icon = Icons.Default.Info,
+                    items = buildList {
+                        add(InfoItem("Status", when (servico?.status) {
+                            "EM_ANDAMENTO" -> "Em andamento"
+                            "CONCLUIDO" -> "Concluído"
+                            else -> "Aguardando"
+                        }))
+                        add(InfoItem("Categoria", servico?.categoria?.nome ?: "N/A"))
+                        add(InfoItem("Valor", "R$ ${servico?.valor ?: "0,00"}"))
+                        servico?.descricao?.let { desc ->
+                            if (desc.isNotEmpty()) add(InfoItem("Descrição", desc))
+                        }
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Botão cancelar redesenhado
+                // Botão cancelar com estilo melhorado
                 OutlinedButton(
                     onClick = { mostrarDialogoCancelar = true },
                     modifier = Modifier
@@ -727,13 +712,13 @@ fun TelaRastreamentoServico(
     }
 }
 
-// Componentes auxiliares estilo Uber
-
+// Componentes auxiliares
 @Composable
-fun InfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+fun DetailRow(
+    icon: ImageVector,
     label: String,
-    value: String
+    value: String,
+    maxLines: Int = 1
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -755,154 +740,3 @@ fun InfoRow(
         Text(
             text = value,
             fontSize = 13.sp,
-            color = Color(0xFF2D2D2D),
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-fun VeiculoSection(
-    marca: String,
-    modelo: String,
-    placa: String,
-    cor: String,
-    ano: String
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(Color(0xFF019D31).copy(alpha = 0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.DirectionsCar,
-                    contentDescription = null,
-                    tint = Color(0xFF019D31),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "🚗 Veículo",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2D2D2D)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFF5F5F5))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            VeiculoInfoRow("Modelo", "$marca $modelo")
-            VeiculoInfoRow("Placa", placa)
-            VeiculoInfoRow("Cor", cor)
-            VeiculoInfoRow("Ano", ano)
-        }
-    }
-}
-
-@Composable
-fun VeiculoInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF6D6D6D),
-            modifier = Modifier.weight(0.4f)
-        )
-        Text(
-            text = value,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF2D2D2D),
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(0.6f)
-        )
-    }
-}
-
-@Composable
-fun ServicoSection(
-    status: String,
-    categoria: String,
-    valor: String,
-    descricao: String?
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(Color(0xFF019D31).copy(alpha = 0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    tint = Color(0xFF019D31),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "📋 Detalhes do Serviço",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2D2D2D)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFF5F5F5))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            VeiculoInfoRow("Status", status)
-            VeiculoInfoRow("Categoria", categoria)
-            VeiculoInfoRow("Valor", valor)
-            if (!descricao.isNullOrEmpty()) {
-                Column {
-                    Text(
-                        text = "Descrição",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF6D6D6D)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = descricao,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color(0xFF2D2D2D)
-                    )
-                }
-            }
-        }
-    }
-}
-

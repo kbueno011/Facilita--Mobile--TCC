@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,13 +71,24 @@ fun TelaCompletarPerfilPrestador(
                         .background(Color(0xFFE6E6E6)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.foto_perfil),
-                        contentDescription = "Foto de perfil",
+                    Box(
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape)
-                    )
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                    colors = listOf(Color(0xFF019D31), Color(0xFF06C755))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier.size(60.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
 
                 // Ícone de adicionar (fora do círculo, sobreposto)

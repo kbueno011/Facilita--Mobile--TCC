@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,28 +90,71 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
     val service = RetrofitFactory.userService
 
     fun enviarDados() {
-        // Validações
-        if (cpf.isBlank() || necessidade.isBlank() || endereco.isBlank()) {
-            Toast.makeText(context, "Preencha todos os campos", Toast.LENGTH_SHORT).show()
+        Log.d("COMPLETAR_PERFIL", "=== Iniciando envio de dados ===")
+        Log.d("COMPLETAR_PERFIL", "CPF: ${cpf.length} dígitos")
+        Log.d("COMPLETAR_PERFIL", "Necessidade: $necessidade")
+        Log.d("COMPLETAR_PERFIL", "Endereço: $endereco")
+
+        // Validações detalhadas
+        if (cpf.isBlank()) {
+            Toast.makeText(context, "❌ Por favor, digite o CPF", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Validar CPF (deve ter 11 dígitos)
         if (cpf.length != 11) {
-            Toast.makeText(context, "CPF deve ter 11 dígitos", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "❌ CPF deve ter exatamente 11 dígitos (apenas números)", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (necessidade.isBlank()) {
+            Toast.makeText(context, "❌ Selecione uma opção de necessidade especial", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (endereco.isBlank()) {
+            Toast.makeText(context, "❌ Por favor, digite seu endereço", Toast.LENGTH_SHORT).show()
             return
         }
 
         // Validar token
         if (tokenUsuario.isBlank()) {
-            Toast.makeText(context, "Token não encontrado. Faça login novamente.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "❌ Token não encontrado. Faça login novamente.", Toast.LENGTH_LONG).show()
+            Log.e("COMPLETAR_PERFIL", "Token vazio!")
             return
         }
 
         loading = true
 
-        if (logradouro.isBlank()) logradouro = endereco
-        if (cidade.isBlank()) cidade = "Não informada"
+        Log.d("COMPLETAR_PERFIL", "Validações OK! Preparando dados...")
+
+        // Garantir que os campos obrigatórios estejam preenchidos
+        if (logradouro.isBlank()) {
+            logradouro = endereco
+            Log.d("COMPLETAR_PERFIL", "Logradouro vazio, usando endereço completo")
+        }
+        if (numero.isBlank()) {
+            numero = "S/N"
+            Log.d("COMPLETAR_PERFIL", "Número vazio, usando S/N")
+        }
+        if (bairro.isBlank()) {
+            bairro = "Centro"
+            Log.d("COMPLETAR_PERFIL", "Bairro vazio, usando Centro")
+        }
+        if (cidade.isBlank()) {
+            cidade = "Não informada"
+            Log.d("COMPLETAR_PERFIL", "Cidade vazia, usando 'Não informada'")
+        }
+        if (cep.isBlank()) {
+            cep = "00000-000"
+            Log.d("COMPLETAR_PERFIL", "CEP vazio, usando 00000-000")
+        }
+
+        // Garantir coordenadas válidas
+        if (latitude == 0.0 && longitude == 0.0) {
+            latitude = -23.550520
+            longitude = -46.633308
+            Log.d("COMPLETAR_PERFIL", "Coordenadas vazias, usando padrão de São Paulo")
+        }
 
         // 1️⃣ POST endereço
         val localRequest = LocalizacaoRequest(
@@ -124,10 +168,13 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
         )
 
 
+        Log.d("COMPLETAR_PERFIL", "Enviando dados de localização: $localRequest")
+
         service.criarLocalizacao(localRequest).enqueue(object : Callback<LocalizacaoResponse> {
             override fun onResponse(call: Call<LocalizacaoResponse>, response: Response<LocalizacaoResponse>) {
                 if (response.isSuccessful && response.body() != null) {
                     val idEndereco = response.body()!!.id
+                    Log.d("COMPLETAR_PERFIL", "✅ Localização criada com ID: $idEndereco")
 
                     // 2️⃣ POST completar perfil com token
                     val perfilRequest = CompletarPerfilRequest(
@@ -135,6 +182,8 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                         cpf = cpf,
                         necessidade = necessidade  // Já vem em UPPERCASE do dropdown
                     )
+
+                    Log.d("COMPLETAR_PERFIL", "Enviando dados do perfil: $perfilRequest")
 
                     service.cadastrarContratante("Bearer $tokenUsuario", perfilRequest)
                         .enqueue(object : Callback<CompletarPerfilResponse> {
@@ -144,29 +193,36 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
                             ) {
                                 loading = false
                                 if (response.isSuccessful) {
-                                    Toast.makeText(context, "Perfil atualizado com sucesso!", Toast.LENGTH_SHORT).show()
+                                    Log.d("COMPLETAR_PERFIL", "✅ Perfil completado com sucesso!")
+                                    Toast.makeText(context, "✅ Perfil atualizado com sucesso!", Toast.LENGTH_SHORT).show()
                                     navController.navigate("tela_home") {
                                         popUpTo("tela_completar_perfil") { inclusive = true }
                                     }
                                 } else {
-                                    Toast.makeText(context, "Erro ao atualizar perfil", Toast.LENGTH_SHORT).show()
+                                    val errorBody = response.errorBody()?.string()
+                                    Log.e("COMPLETAR_PERFIL", "❌ Erro ao atualizar perfil: ${response.code()} - $errorBody")
+                                    Toast.makeText(context, "❌ Erro ao atualizar perfil: ${response.code()}", Toast.LENGTH_LONG).show()
                                 }
                             }
 
                             override fun onFailure(call: Call<CompletarPerfilResponse>, t: Throwable) {
                                 loading = false
-                                Toast.makeText(context, "Falha ao completar perfil: ${t.message}", Toast.LENGTH_LONG).show()
+                                Log.e("COMPLETAR_PERFIL", "❌ Falha ao completar perfil", t)
+                                Toast.makeText(context, "❌ Falha ao completar perfil: ${t.message}", Toast.LENGTH_LONG).show()
                             }
                         })
                 } else {
                     loading = false
-                    Toast.makeText(context, "Erro ao cadastrar endereço", Toast.LENGTH_SHORT).show()
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("COMPLETAR_PERFIL", "❌ Erro ao cadastrar endereço: ${response.code()} - $errorBody")
+                    Toast.makeText(context, "❌ Erro ao cadastrar endereço: ${response.code()}", Toast.LENGTH_LONG).show()
                 }
             }
 
             override fun onFailure(call: Call<LocalizacaoResponse>, t: Throwable) {
                 loading = false
-                Toast.makeText(context, "Falha de conexão: ${t.message}", Toast.LENGTH_SHORT).show()
+                Log.e("COMPLETAR_PERFIL", "❌ Falha de conexão ao cadastrar endereço", t)
+                Toast.makeText(context, "❌ Falha de conexão: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -179,12 +235,25 @@ fun TelaCompletarPerfilContratante(navController: NavController) {
             .padding(horizontal = 24.dp, vertical = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = rememberAsyncImagePainter("https://i.pravatar.cc/150?img=7"),
-            contentDescription = "Foto de perfil",
-            modifier = Modifier.size(100.dp).clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
+        // Ícone de perfil com gradiente verde
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF019D31), Color(0xFF06C755))
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "Perfil",
+                modifier = Modifier.size(50.dp),
+                tint = Color.White
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
 

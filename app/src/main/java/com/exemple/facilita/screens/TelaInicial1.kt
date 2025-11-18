@@ -24,8 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.exemple.facilita.utils.sdp
-import com.exemple.facilita.utils.ssp
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
@@ -364,7 +362,7 @@ fun SplashScreen(navController: NavController) {
                             .size(6.dp)
                             .background(
                                 Color(0xFF00FF47),
-                                shape = androidx.compose.foundation.shape.CircleShape
+                                shape = CircleShape
                             )
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -381,7 +379,7 @@ fun SplashScreen(navController: NavController) {
                             .size(6.dp)
                             .background(
                                 Color(0xFF00FF47),
-                                shape = androidx.compose.foundation.shape.CircleShape
+                                shape = CircleShape
                             )
                     )
                 }

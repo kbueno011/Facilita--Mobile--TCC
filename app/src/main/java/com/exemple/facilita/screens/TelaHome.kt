@@ -57,7 +57,6 @@ fun TelaHome(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = "Rua Elton Silva, 509", fontSize = 12.ssp(), color = Color.Gray)
                     Text(
                         text = "Olá, $nomeUsuario",
                         fontSize = 24.ssp(),
