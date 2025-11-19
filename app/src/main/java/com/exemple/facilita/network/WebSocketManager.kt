@@ -20,7 +20,7 @@ class WebSocketManager {
 
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val SERVER_URL = "https://servidor-facilita.onrender.com"
+        private const val SERVER_URL = "https://facilita-c6hhb9csgygudrdz.canadacentral-01.azurewebsites.net"
 
         @Volatile
         private var instance: WebSocketManager? = null

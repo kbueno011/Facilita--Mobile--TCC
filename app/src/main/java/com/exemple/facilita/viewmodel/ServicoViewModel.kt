@@ -22,7 +22,7 @@ class ServicoViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://servidor-facilita.onrender.com/v1/facilita/")
+            .baseUrl("https://facilita-c6hhb9csgygudrdz.canadacentral-01.azurewebsites.net/v1/facilita/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
@@ -31,6 +31,9 @@ class ServicoViewModel(application: Application) : AndroidViewModel(application)
 
     private val _servico = MutableStateFlow<Servico?>(null)
     val servico: StateFlow<Servico?> = _servico.asStateFlow()
+
+    private val _servicoPedido = MutableStateFlow<ServicoPedido?>(null)
+    val servicoPedido: StateFlow<ServicoPedido?> = _servicoPedido.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -82,53 +85,76 @@ class ServicoViewModel(application: Application) : AndroidViewModel(application)
         pollingJob = null
     }
 
-    // Busca serviço específico por ID usando busca por status
+    // Busca serviço específico por ID - NOVA ESTRATÉGIA: busca TODOS os pedidos
     private suspend fun buscarServicoPorId(token: String, servicoId: Int) {
         try {
-            Log.d("ServicoViewModel", "🔄 Buscando serviço ID: $servicoId")
+            Log.d("ServicoViewModel", "🔄 Buscando serviço ID: $servicoId em TODOS os pedidos")
 
-            // Lista de status possíveis para buscar (em ordem de prioridade)
-            val statusPossiveis = listOf("EM_ANDAMENTO", "ACEITO", "PENDENTE", "AGUARDANDO")
-            var servicoEncontrado: com.exemple.facilita.data.models.ServicoPedido? = null
+            // Busca TODOS os pedidos do contratante (sem filtro de status)
+            val response = apiService.buscarTodosPedidos("Bearer $token")
 
-            // Tenta buscar em cada status até encontrar o serviço
-            for (status in statusPossiveis) {
-                try {
-                    val response = apiService.buscarServicosPorStatus("Bearer $token", status)
+            if (response.isSuccessful && response.body()?.statusCode == 200) {
+                val pedidos = response.body()?.data?.pedidos
 
-                    if (response.isSuccessful && response.body()?.statusCode == 200) {
-                        val pedidos = response.body()?.data?.pedidos
+                Log.d("ServicoViewModel", "📦 Total de pedidos retornados: ${pedidos?.size ?: 0}")
 
-                        // Procura o serviço específico pelo ID
-                        servicoEncontrado = pedidos?.find { it.id == servicoId }
+                // Procura o serviço específico pelo ID
+                val servicoEncontrado = pedidos?.find { it.id == servicoId }
 
-                        if (servicoEncontrado != null) {
-                            Log.d("ServicoViewModel", "✅ Serviço encontrado com status: $status")
-                            break
+                if (servicoEncontrado != null) {
+                    Log.d("ServicoViewModel", "✅ Serviço encontrado!")
+                    Log.d("ServicoViewModel", "   ID: ${servicoEncontrado.id}")
+                    Log.d("ServicoViewModel", "   Status: ${servicoEncontrado.status}")
+                    Log.d("ServicoViewModel", "   Descrição: ${servicoEncontrado.descricao}")
+                    Log.d("ServicoViewModel", "   Valor: R$ ${servicoEncontrado.valor}")
+
+                    // Armazena o ServicoPedido completo (com paradas)
+                    _servicoPedido.value = servicoEncontrado
+
+                    // Converte ServicoPedido para Servico (retrocompatibilidade)
+                    _servico.value = converterParaServico(servicoEncontrado)
+                    _error.value = null
+
+                    // Log das paradas se existirem
+                    servicoEncontrado.paradas?.let { paradas ->
+                        Log.d("ServicoViewModel", "🛣️ Serviço com ${paradas.size} paradas:")
+                        paradas.sortedBy { it.ordem }.forEach { parada ->
+                            Log.d("ServicoViewModel", "  ${parada.ordem}: ${parada.tipo} - ${parada.descricao}")
+                            Log.d("ServicoViewModel", "     Coords: ${parada.lat}, ${parada.lng}")
+                            Log.d("ServicoViewModel", "     Endereço: ${parada.enderecoCompleto}")
                         }
+                    } ?: run {
+                        Log.d("ServicoViewModel", "📍 Serviço SEM paradas definidas")
                     }
-                } catch (e: Exception) {
-                    Log.w("ServicoViewModel", "⚠️ Erro ao buscar status $status: ${e.message}")
-                    continue
-                }
-            }
 
-            if (servicoEncontrado != null) {
-                // Converte ServicoPedido para Servico
-                _servico.value = converterParaServico(servicoEncontrado)
-                _error.value = null
-
-                Log.d("ServicoViewModel", "✅ Serviço atualizado: Status=${servicoEncontrado.status}")
-
-                // Log da localização do prestador se existir
-                servicoEncontrado.prestador?.let { prestador ->
-                    if (prestador.latitudeAtual != null && prestador.longitudeAtual != null) {
-                        Log.d("ServicoViewModel", "📍 Prestador em: ${prestador.latitudeAtual}, ${prestador.longitudeAtual}")
+                    // Log do prestador se existir
+                    servicoEncontrado.prestador?.let { prestador ->
+                        Log.d("ServicoViewModel", "👤 Prestador: ${prestador.usuario?.nome}")
+                        if (prestador.latitudeAtual != null && prestador.longitudeAtual != null) {
+                            Log.d("ServicoViewModel", "   📍 Posição atual: ${prestador.latitudeAtual}, ${prestador.longitudeAtual}")
+                        } else {
+                            Log.w("ServicoViewModel", "   ⚠️ Prestador sem localização atual")
+                        }
+                    } ?: run {
+                        Log.d("ServicoViewModel", "⚠️ Serviço ainda sem prestador atribuído")
                     }
+
+                    // Log da localização de destino
+                    servicoEncontrado.localizacao?.let { loc ->
+                        Log.d("ServicoViewModel", "🎯 Localização de destino:")
+                        Log.d("ServicoViewModel", "   Coords: ${loc.latitude}, ${loc.longitude}")
+                        Log.d("ServicoViewModel", "   Endereço: ${loc.endereco}")
+                    }
+
+                } else {
+                    _error.value = "Serviço não encontrado"
+                    Log.e("ServicoViewModel", "❌ Serviço ID $servicoId não encontrado na lista de pedidos")
+                    Log.e("ServicoViewModel", "   IDs disponíveis: ${pedidos?.map { it.id }?.joinToString()}")
                 }
             } else {
-                _error.value = "Serviço não encontrado"
-                Log.e("ServicoViewModel", "❌ Serviço ID $servicoId não encontrado em nenhum status")
+                val errorMsg = "Erro na API: ${response.code()} - ${response.message()}"
+                _error.value = errorMsg
+                Log.e("ServicoViewModel", "❌ $errorMsg")
             }
         } catch (e: Exception) {
             _error.value = "Erro de conexão: ${e.message}"

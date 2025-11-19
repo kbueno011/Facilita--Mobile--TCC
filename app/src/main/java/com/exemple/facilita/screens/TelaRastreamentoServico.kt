@@ -53,6 +53,7 @@ fun TelaRastreamentoServico(
     val viewModel: ServicoViewModel = viewModel()
 
     val servico by viewModel.servico.collectAsState()
+    val servicoPedido by viewModel.servicoPedido.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     val token = TokenManager.obterToken(context) ?: ""
@@ -67,15 +68,57 @@ fun TelaRastreamentoServico(
     val locationUpdate by webSocketManager.locationUpdate.collectAsState()
 
     // Posições no mapa - com atualização do WebSocket em tempo real
-    var prestadorLat by remember { mutableStateOf(servico?.prestador?.latitudeAtual ?: -23.550520) }
-    var prestadorLng by remember { mutableStateOf(servico?.prestador?.longitudeAtual ?: -46.633308) }
+    var prestadorLat by remember { mutableStateOf(0.0) }
+    var prestadorLng by remember { mutableStateOf(0.0) }
 
-    // Estado para a rota
+    // Atualiza posição inicial do prestador quando o serviço carregar
+    LaunchedEffect(servico?.prestador) {
+        servico?.prestador?.let { prestador ->
+            if (prestador.latitudeAtual != null && prestador.longitudeAtual != null) {
+                prestadorLat = prestador.latitudeAtual
+                prestadorLng = prestador.longitudeAtual
+                Log.d("TelaRastreamento", "📍 Posição inicial do prestador: $prestadorLat, $prestadorLng")
+            }
+        }
+    }
+
+    // Estado para a rota completa (com paradas)
     var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
     var distanciaTexto by remember { mutableStateOf("") }
     var duracaoTexto by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
+
+    // Log quando o serviço é carregado
+    LaunchedEffect(servico, servicoPedido) {
+        Log.d("TelaRastreamento", "📦 Dados do serviço carregados:")
+        Log.d("TelaRastreamento", "   Serviço ID: ${servico?.id}")
+        Log.d("TelaRastreamento", "   Status: ${servico?.status}")
+        Log.d("TelaRastreamento", "   Prestador: ${servico?.prestador?.usuario?.nome}")
+        Log.d("TelaRastreamento", "   Localização destino: ${servico?.localizacao?.latitude}, ${servico?.localizacao?.longitude}")
+        Log.d("TelaRastreamento", "   ServicoPedido: ${servicoPedido != null}")
+        Log.d("TelaRastreamento", "   Paradas no ServicoPedido: ${servicoPedido?.paradas?.size ?: 0}")
+    }
+
+    // Paradas do serviço (ordenadas)
+    val paradas = remember(servicoPedido) {
+        val paradasList = servicoPedido?.paradas?.sortedBy { it.ordem } ?: emptyList()
+        Log.d("TelaRastreamento", "🔄 Paradas recalculadas: ${paradasList.size}")
+        paradasList
+    }
+
+    // Pontos da rota: origem, paradas intermediárias, destino
+    val origem = remember(paradas) {
+        paradas.firstOrNull { it.tipo == "origem" }
+    }
+
+    val paradasIntermediarias = remember(paradas) {
+        paradas.filter { it.tipo == "parada" }
+    }
+
+    val destino = remember(paradas) {
+        paradas.lastOrNull { it.tipo == "destino" }
+    }
 
     // Atualiza posição quando recebe do WebSocket
     LaunchedEffect(locationUpdate) {
@@ -90,12 +133,9 @@ fun TelaRastreamentoServico(
 
     val prestadorPos = LatLng(prestadorLat, prestadorLng)
 
-    val destinoLat = servico?.localizacao?.latitude ?: -23.561414
-    val destinoLng = servico?.localizacao?.longitude ?: -46.656139
-    val destinoPos = LatLng(destinoLat, destinoLng)
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(prestadorPos, 15f)
+        position = CameraPosition.fromLatLngZoom(prestadorPos, 17f) // Mais próximo!
     }
 
     // Conecta ao WebSocket automaticamente
@@ -150,43 +190,135 @@ fun TelaRastreamentoServico(
         }
     }
 
-    // Busca a rota quando as posições mudam
-    LaunchedEffect(prestadorLat, prestadorLng, destinoLat, destinoLng) {
+    // Busca a rota completa quando as paradas ou posição do prestador mudam
+    LaunchedEffect(paradas, prestadorLat, prestadorLng, servico) {
         coroutineScope.launch {
-            Log.d("TelaRastreamento", "🗺️ Buscando rota atualizada...")
-            val route = DirectionsService.getRoute(
-                origin = LatLng(prestadorLat, prestadorLng),
-                destination = LatLng(destinoLat, destinoLng)
-            )
+            Log.d("TelaRastreamento", "🗺️ Iniciando busca de rota...")
+            Log.d("TelaRastreamento", "   Paradas: ${paradas.size}")
+            Log.d("TelaRastreamento", "   Prestador: $prestadorLat, $prestadorLng")
 
-            route?.let {
-                routePoints = it.points
-                distanciaTexto = it.distanceText
-                duracaoTexto = it.durationText
-                Log.d("TelaRastreamento", "✅ Rota atualizada: ${it.points.size} pontos, ${it.distanceText}, ${it.durationText}")
+            // Log detalhado das paradas
+            if (paradas.isNotEmpty()) {
+                paradas.forEach { parada ->
+                    Log.d("TelaRastreamento", "   Parada ${parada.ordem}: ${parada.tipo} - ${parada.lat}, ${parada.lng}")
+                }
+            }
 
-                // Ajusta a câmera para mostrar a rota completa
-                if (it.points.isNotEmpty()) {
-                    val boundsBuilder = LatLngBounds.Builder()
-                    it.points.forEach { point -> boundsBuilder.include(point) }
-                    val bounds = boundsBuilder.build()
-                    cameraPositionState.animate(
-                        update = CameraUpdateFactory.newLatLngBounds(bounds, 100),
-                        durationMs = 1500
+            // CASO 1: Tem paradas definidas pela API (origem, paradas, destino)
+            if (paradas.isNotEmpty() && origem != null && destino != null) {
+                Log.d("TelaRastreamento", "📍 Usando paradas da API")
+
+                // Monta a lista de waypoints (paradas intermediárias)
+                val waypoints = paradasIntermediarias.map { parada ->
+                    LatLng(parada.lat, parada.lng)
+                }
+
+                Log.d("TelaRastreamento", "   Origem: ${origem.lat}, ${origem.lng}")
+                waypoints.forEachIndexed { index, waypoint ->
+                    Log.d("TelaRastreamento", "   Waypoint $index: ${waypoint.latitude}, ${waypoint.longitude}")
+                }
+                Log.d("TelaRastreamento", "   Destino: ${destino.lat}, ${destino.lng}")
+
+                val route = DirectionsService.getRoute(
+                    origin = LatLng(origem.lat, origem.lng),
+                    destination = LatLng(destino.lat, destino.lng),
+                    waypoints = waypoints
+                )
+
+                route?.let {
+                    routePoints = it.points
+                    distanciaTexto = it.distanceText
+                    duracaoTexto = it.durationText
+                    Log.d("TelaRastreamento", "✅ Rota com paradas atualizada: ${it.points.size} pontos, " +
+                            "${waypoints.size} waypoints, ${it.distanceText}, ${it.durationText}")
+
+                    // Ajusta a câmera para mostrar a rota completa
+                    if (it.points.isNotEmpty()) {
+                        val boundsBuilder = LatLngBounds.Builder()
+                        it.points.forEach { point -> boundsBuilder.include(point) }
+                        // Adiciona também as posições das paradas
+                        paradas.forEach { parada ->
+                            boundsBuilder.include(LatLng(parada.lat, parada.lng))
+                        }
+                        val bounds = boundsBuilder.build()
+                        cameraPositionState.animate(
+                            update = CameraUpdateFactory.newLatLngBounds(bounds, 80), // Padding menor = mais próximo
+                            durationMs = 1000 // Animação mais rápida
+                        )
+                    }
+                } ?: run {
+                    Log.e("TelaRastreamento", "❌❌❌ ERRO: API do Google não retornou rota!")
+                    Log.e("TelaRastreamento", "Verifique:")
+                    Log.e("TelaRastreamento", "1. Chave da API está correta?")
+                    Log.e("TelaRastreamento", "2. Directions API está habilitada?")
+                    Log.e("TelaRastreamento", "3. Há erro de rede?")
+                    Log.e("TelaRastreamento", "Veja logs do DirectionsService acima")
+                }
+            }
+            // CASO 2: Não tem paradas, usa prestador atual -> destino
+            else {
+                val servicoAtual = servico
+                val localizacao = servicoAtual?.localizacao
+
+                if (localizacao?.latitude != null && localizacao.longitude != null) {
+                    Log.d("TelaRastreamento", "📍 Usando rota simples: Prestador -> Destino")
+                    val destinoLat = localizacao.latitude
+                    val destinoLng = localizacao.longitude
+
+                    Log.d("TelaRastreamento", "   Prestador (origem): $prestadorLat, $prestadorLng")
+                    Log.d("TelaRastreamento", "   Destino: $destinoLat, $destinoLng")
+
+                    val route = DirectionsService.getRoute(
+                        origin = LatLng(prestadorLat, prestadorLng),
+                        destination = LatLng(destinoLat, destinoLng)
                     )
+
+                    route?.let {
+                        routePoints = it.points
+                        distanciaTexto = it.distanceText
+                        duracaoTexto = it.durationText
+                        Log.d("TelaRastreamento", "✅ Rota simples atualizada: ${it.points.size} pontos, " +
+                                "${it.distanceText}, ${it.durationText}")
+
+                        // Ajusta câmera (mais próximo e rápido)
+                        if (it.points.isNotEmpty()) {
+                            val boundsBuilder = LatLngBounds.Builder()
+                            it.points.forEach { point -> boundsBuilder.include(point) }
+                            val bounds = boundsBuilder.build()
+                            cameraPositionState.animate(
+                                update = CameraUpdateFactory.newLatLngBounds(bounds, 80), // Padding menor
+                                durationMs = 1000 // Animação mais rápida
+                            )
+                        }
+                    } ?: run {
+                        Log.e("TelaRastreamento", "❌❌❌ ERRO: API do Google não retornou rota!")
+                        Log.e("TelaRastreamento", "Veja logs do DirectionsService para detalhes")
+                    }
+                } else {
+                    Log.e("TelaRastreamento", "❌ Sem dados suficientes para traçar rota")
+                    Log.e("TelaRastreamento", "   Paradas: ${paradas.size}")
+                    Log.e("TelaRastreamento", "   Localizacao: $localizacao")
                 }
             }
         }
     }
 
-    // Atualiza câmera suavemente quando prestador se move (sem zoom out)
+    // Atualiza câmera suavemente quando prestador se move
     LaunchedEffect(prestadorLat, prestadorLng) {
-        if (routePoints.isEmpty()) {
-            // Se não tem rota ainda, apenas segue o prestador
-            cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLng(prestadorPos),
-                durationMs = 1000
-            )
+        if (prestadorLat != 0.0 && prestadorLng != 0.0) {
+            if (routePoints.isEmpty()) {
+                // Se não tem rota ainda, segue o prestador mais de perto
+                cameraPositionState.animate(
+                    update = CameraUpdateFactory.newLatLngZoom(prestadorPos, 17f),
+                    durationMs = 800 // Animação suave
+                )
+            } else {
+                // Com rota, apenas centraliza suavemente sem dar zoom
+                cameraPositionState.animate(
+                    update = CameraUpdateFactory.newLatLng(prestadorPos),
+                    durationMs = 600 // Movimento fluido
+                )
+            }
         }
     }
 
@@ -215,57 +347,138 @@ fun TelaRastreamentoServico(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Mapa com estilo melhorado e rota desenhada
+        // Mapa com visual moderno e interações suaves
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = MapProperties(
                 isMyLocationEnabled = false,
-                mapType = MapType.NORMAL
+                mapType = MapType.NORMAL,
+                isTrafficEnabled = false, // Sem tráfego para visual limpo
+                isIndoorEnabled = true
             ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
-                compassEnabled = true,
+                compassEnabled = false, // Sem bússola para visual mais limpo
+                mapToolbarEnabled = false, // Sem toolbar do Google
                 scrollGesturesEnabled = true,
                 zoomGesturesEnabled = true,
-                rotationGesturesEnabled = true
+                tiltGesturesEnabled = true, // Permitir inclinação
+                rotationGesturesEnabled = true,
+                scrollGesturesEnabledDuringRotateOrZoom = true
             )
         ) {
-            // Desenha a rota (Polyline) estilo Uber
+            // Desenha a rota (Polyline) - Estilo Google Maps Moderno
             if (routePoints.isNotEmpty()) {
-                // Linha de fundo (mais grossa e escura)
+                // Linha de fundo (borda escura sutil)
                 Polyline(
                     points = routePoints,
-                    color = Color(0xFF2D2D2D),
-                    width = 12f,
+                    color = Color(0xFF4A4A4A),
+                    width = 10f,
                     geodesic = true
                 )
 
-                // Linha principal (verde vibrante)
+                // Linha principal (CINZA elegante)
                 Polyline(
                     points = routePoints,
-                    color = Color(0xFF019D31),
-                    width = 8f,
+                    color = Color(0xFF8E8E93), // Cinza moderno
+                    width = 7f,
                     geodesic = true
                 )
             }
 
-            // Marcador do prestador (VERDE) - Atualiza em tempo real via WebSocket
-            Marker(
-                state = MarkerState(position = prestadorPos),
-                title = prestadorNome,
-                snippet = if (isSocketConnected) "🟢 Ao vivo" else "⚪ Offline",
-                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
-            )
+            // Marcador do PRESTADOR - Círculo azul pulsante (estilo Uber)
+            if (prestadorLat != 0.0 && prestadorLng != 0.0) {
+                // Círculo externo (halo pulsante)
+                Circle(
+                    center = prestadorPos,
+                    radius = 50.0,
+                    fillColor = Color(0x3300B0FF),
+                    strokeColor = Color.Transparent,
+                    strokeWidth = 0f
+                )
+                // Círculo principal (azul sólido)
+                Circle(
+                    center = prestadorPos,
+                    radius = 25.0,
+                    fillColor = Color(0xFF00B0FF),
+                    strokeColor = Color.White,
+                    strokeWidth = 4f
+                )
+                // Ponto central branco
+                Circle(
+                    center = prestadorPos,
+                    radius = 8.0,
+                    fillColor = Color.White,
+                    strokeColor = Color.Transparent,
+                    strokeWidth = 0f
+                )
+            }
 
-            // Marcador do destino (VERMELHO)
-            Marker(
-                state = MarkerState(position = destinoPos),
-                title = "📍 Destino",
-                snippet = servico?.localizacao?.endereco ?: "",
-                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-            )
+            // Marcadores das paradas - ESTILO MINIMALISTA
+            if (paradas.isNotEmpty()) {
+                Log.d("TelaRastreamento", "🎯 Desenhando ${paradas.size} marcadores minimalistas")
+
+                paradas.forEach { parada ->
+                    val markerPos = LatLng(parada.lat, parada.lng)
+
+                    when (parada.tipo) {
+                        "origem" -> {
+                            // Origem - Círculo verde simples
+                            Circle(
+                                center = markerPos,
+                                radius = 20.0,
+                                fillColor = Color(0xFF00C853),
+                                strokeColor = Color.White,
+                                strokeWidth = 4f
+                            )
+                            Log.d("TelaRastreamento", "   ● Origem (círculo verde)")
+                        }
+                        "parada" -> {
+                            // Parada - Círculo branco com borda verde
+                            Circle(
+                                center = markerPos,
+                                radius = 15.0,
+                                fillColor = Color.White,
+                                strokeColor = Color(0xFF00C853),
+                                strokeWidth = 4f
+                            )
+                            Log.d("TelaRastreamento", "   ○ Parada ${parada.ordem} (círculo branco)")
+                        }
+                        "destino" -> {
+                            // Destino - Pin vermelho minimalista
+                            Marker(
+                                state = MarkerState(position = markerPos),
+                                title = "Destino",
+                                snippet = parada.enderecoCompleto,
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                            )
+                            Log.d("TelaRastreamento", "   📍 Destino (pin vermelho)")
+                        }
+                    }
+                }
+            } else {
+                // Fallback: marcador simples do destino
+                Log.d("TelaRastreamento", "📍 Sem paradas, usando marcador de destino simples")
+                val servicoAtualFallback = servico
+                val localizacaoFallback = servicoAtualFallback?.localizacao
+
+                if (localizacaoFallback?.latitude != null && localizacaoFallback.longitude != null) {
+                    val finalDestinoPos = LatLng(
+                        localizacaoFallback.latitude,
+                        localizacaoFallback.longitude
+                    )
+                    Marker(
+                        state = MarkerState(position = finalDestinoPos),
+                        title = "Destino",
+                        snippet = localizacaoFallback.endereco ?: "",
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                    )
+                } else {
+                    Log.e("TelaRastreamento", "❌ Sem localização de destino disponível")
+                }
+            }
         }
 
         // Header moderno com indicador de tempo real

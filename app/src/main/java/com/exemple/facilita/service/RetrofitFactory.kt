@@ -12,7 +12,7 @@ object RetrofitFactory {
         .create()
 
     private val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl("https://servidor-facilita.onrender.com/")
+        .baseUrl("https://facilita-c6hhb9csgygudrdz.canadacentral-01.azurewebsites.net/")
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 

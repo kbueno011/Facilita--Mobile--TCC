@@ -22,7 +22,7 @@ class NotificacaoViewModel(application: Application) : AndroidViewModel(applicat
 
     init {
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://servidor-facilita.onrender.com/v1/facilita/")
+            .baseUrl("https://facilita-c6hhb9csgygudrdz.canadacentral-01.azurewebsites.net/v1/facilita/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 

@@ -226,7 +226,29 @@ data class ServicoPedido(
     @SerializedName("localizacao")
     val localizacao: Localizacao?,
     @SerializedName("prestador")
-    val prestador: PrestadorInfo?
+    val prestador: PrestadorInfo?,
+    @SerializedName("paradas")
+    val paradas: List<ParadaServico>?
+)
+
+// Modelo de Parada retornada pela API
+data class ParadaServico(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("ordem")
+    val ordem: Int,
+    @SerializedName("tipo")
+    val tipo: String, // "origem", "parada", "destino"
+    @SerializedName("lat")
+    val lat: Double,
+    @SerializedName("lng")
+    val lng: Double,
+    @SerializedName("descricao")
+    val descricao: String?,
+    @SerializedName("endereco_completo")
+    val enderecoCompleto: String?,
+    @SerializedName("tempo_estimado_chegada")
+    val tempoEstimadoChegada: String?
 )
 
 data class Paginacao(

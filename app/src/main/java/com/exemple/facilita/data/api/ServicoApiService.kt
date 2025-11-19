@@ -35,6 +35,14 @@ interface ServicoApiService {
         @Query("status") status: String
     ): Response<ServicosPorStatusResponse>
 
+    // Buscar TODOS os pedidos do contratante (sem filtro de status)
+    @GET("servico/contratante/pedidos")
+    suspend fun buscarTodosPedidos(
+        @Header("Authorization") token: String,
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): Response<ServicosPorStatusResponse>
+
     // Contratante vê seu serviço sendo executado (GET genérico)
     @GET("servico")
     suspend fun obterServicoEmExecucao(

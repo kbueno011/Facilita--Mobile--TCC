@@ -10,9 +10,9 @@ import java.net.URL
 object DirectionsService {
     private const val TAG = "DirectionsService"
 
-    // Sua chave da API do Google Maps
-    // IMPORTANTE: Coloque sua chave real aqui ou no local.properties
-    private const val API_KEY = "AIzaSyBpDzK-NLdG9TxvqOcjvzlr5xKXg0XGXkY"
+    // Chave da API do Google Maps (Directions API)
+    // MESMA chave do Google Maps usado no app
+    private const val API_KEY = "AIzaSyBKFwfrLdbTreqsOwnpMS9-zt9KD-HEH28"
 
     data class RouteResult(
         val points: List<LatLng>,
@@ -24,30 +24,51 @@ object DirectionsService {
 
     /**
      * Busca a rota entre dois pontos usando Google Directions API
+     * Com suporte a waypoints (paradas intermediárias)
      */
     suspend fun getRoute(
         origin: LatLng,
-        destination: LatLng
+        destination: LatLng,
+        waypoints: List<LatLng> = emptyList()
     ): RouteResult? = withContext(Dispatchers.IO) {
         try {
             val originStr = "${origin.latitude},${origin.longitude}"
             val destinationStr = "${destination.latitude},${destination.longitude}"
 
+            // Adiciona waypoints se existirem
+            val waypointsStr = if (waypoints.isNotEmpty()) {
+                val waypointsFormatted = waypoints.joinToString("|") {
+                    "${it.latitude},${it.longitude}"
+                }
+                "&waypoints=optimize:false|$waypointsFormatted"
+            } else {
+                ""
+            }
+
             val urlString = "https://maps.googleapis.com/maps/api/directions/json?" +
                     "origin=$originStr" +
                     "&destination=$destinationStr" +
+                    waypointsStr +
                     "&mode=driving" +
                     "&key=$API_KEY"
 
-            Log.d(TAG, "🗺️ Buscando rota: $originStr -> $destinationStr")
+            Log.d(TAG, "🗺️ Buscando rota: $originStr -> ${waypoints.size} paradas -> $destinationStr")
+            Log.d(TAG, "🔗 URL: $urlString")
 
             val response = URL(urlString).readText()
-            val json = JSONObject(response)
+            Log.d(TAG, "📥 Resposta recebida (${response.length} chars)")
 
+            val json = JSONObject(response)
             val status = json.getString("status")
+
+            Log.d(TAG, "📊 Status da API: $status")
 
             if (status != "OK") {
                 Log.e(TAG, "❌ Erro na API: $status")
+                if (json.has("error_message")) {
+                    Log.e(TAG, "   Mensagem: ${json.getString("error_message")}")
+                }
+                Log.e(TAG, "   Resposta completa: $response")
                 return@withContext null
             }
 
@@ -87,7 +108,9 @@ object DirectionsService {
             )
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erro ao buscar rota", e)
+            Log.e(TAG, "❌ Erro ao buscar rota: ${e.message}")
+            Log.e(TAG, "❌ Tipo: ${e.javaClass.simpleName}")
+            e.printStackTrace()
             null
         }
     }
