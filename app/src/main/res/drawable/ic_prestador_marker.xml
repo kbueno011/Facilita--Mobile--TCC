@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp"
+    android:height="56dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+
+    <!-- Halo azul externo (pulsante) -->
+    <path
+        android:fillColor="#3300B0FF"
+        android:pathData="M28,28m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0"/>
+
+    <!-- Círculo azul principal -->
+    <path
+        android:fillColor="#00B0FF"
+        android:pathData="M28,28m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0"/>
+
+    <!-- Borda branca -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:pathData="M28,28m-17,0a17,17 0,1 1,34 0a17,17 0,1 1,-34 0"/>
+
+    <!-- Ícone de carro/moto branco no centro -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M23,25h10l-1.5,-4.5h-7L23,25zM25,30c-0.83,0 -1.5,-0.67 -1.5,-1.5S24.17,27 25,27s1.5,0.67 1.5,1.5S25.83,30 25,30zM31,30c-0.83,0 -1.5,-0.67 -1.5,-1.5S30.17,27 31,27s1.5,0.67 1.5,1.5S31.83,30 31,30zM22,26.5c0,0.83 0.67,1.5 1.5,1.5h9c0.83,0 1.5,-0.67 1.5,-1.5V26h1.5c0.55,0 1,0.45 1,1v3c0,0.55 -0.45,1 -1,1h-1.07c-0.35,1.2 -1.46,2 -2.68,2c-1.22,0 -2.33,-0.8 -2.68,-2h-3.29c-0.35,1.2 -1.46,2 -2.68,2c-1.22,0 -2.33,-0.8 -2.68,-2H19c-0.55,0 -1,-0.45 -1,-1v-3c0,-0.55 0.45,-1 1,-1h3V26.5z"/>
+</vector>
+

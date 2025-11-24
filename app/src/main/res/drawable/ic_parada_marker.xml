@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+
+    <!-- Círculo externo verde -->
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M20,20m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0"/>
+
+    <!-- Círculo branco interno -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,20m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0"/>
+
+    <!-- Ponto verde central pequeno -->
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M20,20m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0"/>
+</vector>
+

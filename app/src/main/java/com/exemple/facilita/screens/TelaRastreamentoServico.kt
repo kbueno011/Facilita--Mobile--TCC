@@ -42,6 +42,8 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,13 +122,36 @@ fun TelaRastreamentoServico(
         paradas.lastOrNull { it.tipo == "destino" }
     }
 
-    // Atualiza posição quando recebe do WebSocket
+    // Atualiza posição quando recebe do WebSocket - COM VALIDAÇÃO
     LaunchedEffect(locationUpdate) {
         locationUpdate?.let { update ->
+            Log.d("TelaRastreamento", "📡 Recebido update WebSocket:")
+            Log.d("TelaRastreamento", "   ServicoId recebido: ${update.servicoId}")
+            Log.d("TelaRastreamento", "   ServicoId esperado: $servicoId")
+            Log.d("TelaRastreamento", "   Latitude: ${update.latitude}")
+            Log.d("TelaRastreamento", "   Longitude: ${update.longitude}")
+            Log.d("TelaRastreamento", "   Prestador: ${update.prestadorName}")
+            Log.d("TelaRastreamento", "   Timestamp: ${update.timestamp}")
+
             if (update.servicoId.toString() == servicoId) {
-                prestadorLat = update.latitude
-                prestadorLng = update.longitude
-                Log.d("TelaRastreamento", "📍 Posição atualizada via WebSocket: ${update.latitude}, ${update.longitude}")
+                // Validar se as coordenadas são válidas
+                if (update.latitude != 0.0 && update.longitude != 0.0) {
+                    val distanciaMovida = sqrt(
+                        (update.latitude - prestadorLat).pow(2.0) +
+                        (update.longitude - prestadorLng).pow(2.0)
+                    )
+
+                    prestadorLat = update.latitude
+                    prestadorLng = update.longitude
+
+                    Log.d("TelaRastreamento", "✅ Posição ATUALIZADA via WebSocket!")
+                    Log.d("TelaRastreamento", "   Nova posição: $prestadorLat, $prestadorLng")
+                    Log.d("TelaRastreamento", "   Distância movida: ${distanciaMovida * 111000} metros (aprox)")
+                } else {
+                    Log.w("TelaRastreamento", "⚠️ Coordenadas inválidas recebidas (0,0)")
+                }
+            } else {
+                Log.w("TelaRastreamento", "⚠️ Update para serviço diferente - ignorado")
             }
         }
     }
@@ -303,21 +328,28 @@ fun TelaRastreamentoServico(
         }
     }
 
-    // Atualiza câmera suavemente quando prestador se move
-    LaunchedEffect(prestadorLat, prestadorLng) {
+    // Atualiza câmera suavemente quando prestador se move - MELHORADO
+    var cameraJaFoiCentralizada by remember { mutableStateOf(false) }
+
+    LaunchedEffect(prestadorLat, prestadorLng, routePoints) {
         if (prestadorLat != 0.0 && prestadorLng != 0.0) {
-            if (routePoints.isEmpty()) {
-                // Se não tem rota ainda, segue o prestador mais de perto
+            Log.d("TelaRastreamento", "🎥 Atualizando câmera para posição: $prestadorLat, $prestadorLng")
+
+            if (routePoints.isEmpty() || !cameraJaFoiCentralizada) {
+                // Primeira vez ou sem rota: centra com zoom adequado
                 cameraPositionState.animate(
-                    update = CameraUpdateFactory.newLatLngZoom(prestadorPos, 17f),
-                    durationMs = 800 // Animação suave
+                    update = CameraUpdateFactory.newLatLngZoom(prestadorPos, 16f),
+                    durationMs = 1000
                 )
+                cameraJaFoiCentralizada = true
+                Log.d("TelaRastreamento", "   Câmera centralizada inicial")
             } else {
-                // Com rota, apenas centraliza suavemente sem dar zoom
+                // Movimento suave seguindo o prestador (sem mudar zoom)
                 cameraPositionState.animate(
                     update = CameraUpdateFactory.newLatLng(prestadorPos),
-                    durationMs = 600 // Movimento fluido
+                    durationMs = 800 // Animação fluida
                 )
+                Log.d("TelaRastreamento", "   Câmera seguindo movimento")
             }
         }
     }
@@ -369,92 +401,172 @@ fun TelaRastreamentoServico(
                 scrollGesturesEnabledDuringRotateOrZoom = true
             )
         ) {
-            // Desenha a rota (Polyline) - Estilo Google Maps Moderno
+            // Desenha a rota (Polyline) - Estilo FACILITA (Verde moderno)
             if (routePoints.isNotEmpty()) {
-                // Linha de fundo (borda escura sutil)
+                // Linha de fundo (borda escura para profundidade)
                 Polyline(
                     points = routePoints,
-                    color = Color(0xFF4A4A4A),
-                    width = 10f,
+                    color = Color(0xFF006400),
+                    width = 12f,
                     geodesic = true
                 )
 
-                // Linha principal (CINZA elegante)
+                // Linha principal (VERDE FACILITA vibrante)
                 Polyline(
                     points = routePoints,
-                    color = Color(0xFF8E8E93), // Cinza moderno
-                    width = 7f,
+                    color = Color(0xFF00C853), // Verde principal do app
+                    width = 8f,
+                    geodesic = true
+                )
+
+                // Linha central (branco fino para destaque)
+                Polyline(
+                    points = routePoints,
+                    color = Color.White.copy(alpha = 0.7f),
+                    width = 2f,
                     geodesic = true
                 )
             }
 
-            // Marcador do PRESTADOR - Círculo azul pulsante (estilo Uber)
+            // Marcador do PRESTADOR - Círculo azul pulsante MELHORADO (estilo Uber)
             if (prestadorLat != 0.0 && prestadorLng != 0.0) {
-                // Círculo externo (halo pulsante)
+                // Halo pulsante grande (animação de radar)
                 Circle(
                     center = prestadorPos,
-                    radius = 50.0,
-                    fillColor = Color(0x3300B0FF),
+                    radius = 60.0 * pulseAlpha,
+                    fillColor = Color(0x4000B0FF),
                     strokeColor = Color.Transparent,
                     strokeWidth = 0f
                 )
-                // Círculo principal (azul sólido)
+
+                // Círculo médio (segunda camada)
                 Circle(
                     center = prestadorPos,
-                    radius = 25.0,
+                    radius = 35.0,
+                    fillColor = Color(0x6000B0FF),
+                    strokeColor = Color.Transparent,
+                    strokeWidth = 0f
+                )
+
+                // Círculo principal (azul sólido com borda branca grossa)
+                Circle(
+                    center = prestadorPos,
+                    radius = 22.0,
                     fillColor = Color(0xFF00B0FF),
                     strokeColor = Color.White,
-                    strokeWidth = 4f
+                    strokeWidth = 5f
                 )
-                // Ponto central branco
+
+                // Ícone de veículo/moto no centro (representado por círculo branco com borda)
                 Circle(
                     center = prestadorPos,
-                    radius = 8.0,
+                    radius = 10.0,
                     fillColor = Color.White,
-                    strokeColor = Color.Transparent,
-                    strokeWidth = 0f
+                    strokeColor = Color(0xFF00B0FF),
+                    strokeWidth = 2f
+                )
+
+                // Direção indicador (pequeno ponto verde na frente - simula movimento)
+                Circle(
+                    center = LatLng(prestadorPos.latitude + 0.00005, prestadorPos.longitude),
+                    radius = 5.0,
+                    fillColor = Color(0xFF00FF00),
+                    strokeColor = Color.White,
+                    strokeWidth = 2f
                 )
             }
 
-            // Marcadores das paradas - ESTILO MINIMALISTA
+            // Marcadores das paradas - ESTILO MODERNO FACILITA
             if (paradas.isNotEmpty()) {
-                Log.d("TelaRastreamento", "🎯 Desenhando ${paradas.size} marcadores minimalistas")
+                Log.d("TelaRastreamento", "🎯 Desenhando ${paradas.size} marcadores modernos")
 
                 paradas.forEach { parada ->
                     val markerPos = LatLng(parada.lat, parada.lng)
 
                     when (parada.tipo) {
                         "origem" -> {
-                            // Origem - Círculo verde simples
+                            // Origem - Círculo verde vibrante com halo
+                            Circle(
+                                center = markerPos,
+                                radius = 30.0,
+                                fillColor = Color(0x4000C853),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Circle(
+                                center = markerPos,
+                                radius = 18.0,
+                                fillColor = Color(0xFF00C853),
+                                strokeColor = Color.White,
+                                strokeWidth = 5f
+                            )
+                            Circle(
+                                center = markerPos,
+                                radius = 8.0,
+                                fillColor = Color.White,
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Log.d("TelaRastreamento", "   🟢 Origem (círculo verde)")
+                        }
+                        "parada" -> {
+                            // Parada - Círculo branco com borda verde grossa
+                            Circle(
+                                center = markerPos,
+                                radius = 22.0,
+                                fillColor = Color(0x4000C853),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Circle(
+                                center = markerPos,
+                                radius = 14.0,
+                                fillColor = Color.White,
+                                strokeColor = Color(0xFF00C853),
+                                strokeWidth = 5f
+                            )
+                            Circle(
+                                center = markerPos,
+                                radius = 5.0,
+                                fillColor = Color(0xFF00C853),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Log.d("TelaRastreamento", "   ⚪ Parada ${parada.ordem} (círculo branco)")
+                        }
+                        "destino" -> {
+                            // Destino - Pin vermelho moderno estilo Google Maps
+                            Circle(
+                                center = markerPos,
+                                radius = 35.0,
+                                fillColor = Color(0x40FF1744),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
                             Circle(
                                 center = markerPos,
                                 radius = 20.0,
-                                fillColor = Color(0xFF00C853),
+                                fillColor = Color(0xFFFF1744),
                                 strokeColor = Color.White,
-                                strokeWidth = 4f
+                                strokeWidth = 5f
                             )
-                            Log.d("TelaRastreamento", "   ● Origem (círculo verde)")
-                        }
-                        "parada" -> {
-                            // Parada - Círculo branco com borda verde
+                            // Ponto central branco
                             Circle(
                                 center = markerPos,
-                                radius = 15.0,
+                                radius = 7.0,
                                 fillColor = Color.White,
-                                strokeColor = Color(0xFF00C853),
-                                strokeWidth = 4f
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
                             )
-                            Log.d("TelaRastreamento", "   ○ Parada ${parada.ordem} (círculo branco)")
-                        }
-                        "destino" -> {
-                            // Destino - Pin vermelho minimalista
+                            // Adiciona marcador tradicional também para o snippet
                             Marker(
                                 state = MarkerState(position = markerPos),
-                                title = "Destino",
+                                title = "📍 Destino Final",
                                 snippet = parada.enderecoCompleto,
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED),
+                                visible = false // Invisível, apenas para info
                             )
-                            Log.d("TelaRastreamento", "   📍 Destino (pin vermelho)")
+                            Log.d("TelaRastreamento", "   🔴 Destino (pin vermelho)")
                         }
                     }
                 }

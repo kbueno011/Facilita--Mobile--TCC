@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="60dp"
+    android:viewportWidth="48"
+    android:viewportHeight="60">
+
+    <!-- Pin moderno vermelho -->
+    <path
+        android:fillColor="#FF1744"
+        android:pathData="M24,2C13.51,2 5,10.51 5,21c0,15.75 19,35 19,35s19,-19.25 19,-35C43,10.51 34.49,2 24,2z"/>
+
+    <!-- Círculo branco interno -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,12m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0"/>
+
+    <!-- Ponto vermelho central -->
+    <path
+        android:fillColor="#FF1744"
+        android:pathData="M24,17m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+</vector>
+

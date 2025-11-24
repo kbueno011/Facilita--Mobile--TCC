@@ -20,7 +20,7 @@ class WebSocketManager {
 
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val SERVER_URL = "https://facilita-c6hhb9csgygudrdz.canadacentral-01.azurewebsites.net"
+        private const val SERVER_URL = "wss://facilita-c6hhb9csgygudrdz.canadacentral-01.azurewebsites.net"
 
         @Volatile
         private var instance: WebSocketManager? = null
@@ -50,6 +50,7 @@ class WebSocketManager {
             socket?.on(Socket.EVENT_CONNECT_ERROR, onConnectError)
             socket?.on("location_updated", onLocationUpdated)
             socket?.on("connect_response", onConnectResponse)
+            socket?.on("servico_joined", onServicoJoined)
 
             socket?.connect()
 
@@ -81,10 +82,24 @@ class WebSocketManager {
 
     fun joinServico(servicoId: String) {
         try {
+            Log.d(TAG, "🚪 Entrando na sala do serviço: $servicoId")
             socket?.emit("join_servico", servicoId)
-            Log.d(TAG, "join_servico emitido: $servicoId")
+            Log.d(TAG, "✅ Evento join_servico emitido com sucesso")
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao entrar no serviço", e)
+            Log.e(TAG, "❌ Erro ao entrar no serviço $servicoId", e)
+            e.printStackTrace()
+        }
+    }
+
+    private val onServicoJoined = Emitter.Listener { args ->
+        try {
+            val data = args[0] as? JSONObject
+            Log.d(TAG, "🎉 Resposta de servico_joined: $data")
+            val servicoId = data?.optString("servicoId", "")
+            val message = data?.optString("message", "")
+            Log.d(TAG, "✅ Entrou com sucesso no serviço $servicoId: $message")
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao processar resposta de servico_joined", e)
         }
     }
 
@@ -129,12 +144,23 @@ class WebSocketManager {
 
     private val onLocationUpdated = Emitter.Listener { args ->
         try {
+            Log.d(TAG, "🎯 Evento location_updated recebido! Args: ${args.size}")
+
             val data = args[0] as JSONObject
+            Log.d(TAG, "📦 Dados recebidos: $data")
+
             val servicoId = data.optInt("servicoId", 0)
             val latitude = data.optDouble("latitude", 0.0)
             val longitude = data.optDouble("longitude", 0.0)
             val prestadorName = data.optString("prestadorName", "")
             val timestamp = data.optString("timestamp", "")
+
+            Log.d(TAG, "📍 Localização processada:")
+            Log.d(TAG, "   ServicoId: $servicoId")
+            Log.d(TAG, "   Latitude: $latitude")
+            Log.d(TAG, "   Longitude: $longitude")
+            Log.d(TAG, "   Prestador: $prestadorName")
+            Log.d(TAG, "   Timestamp: $timestamp")
 
             val update = LocationUpdate(
                 servicoId = servicoId,
@@ -145,26 +171,31 @@ class WebSocketManager {
             )
 
             _locationUpdate.value = update
-            Log.d(TAG, "Localização atualizada: lat=$latitude, lng=$longitude")
+            Log.d(TAG, "✅ LocationUpdate atualizado no StateFlow!")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao processar location_updated", e)
+            Log.e(TAG, "❌ Erro ao processar location_updated", e)
+            e.printStackTrace()
         }
     }
 
     fun disconnect() {
         try {
+            Log.d(TAG, "🔌 Desconectando WebSocket...")
             socket?.off(Socket.EVENT_CONNECT)
             socket?.off(Socket.EVENT_DISCONNECT)
             socket?.off(Socket.EVENT_CONNECT_ERROR)
             socket?.off("location_updated")
             socket?.off("connect_response")
+            socket?.off("servico_joined")
             socket?.disconnect()
             socket = null
             _isConnected.value = false
-            Log.d(TAG, "Socket desconectado manualmente")
+            _locationUpdate.value = null
+            Log.d(TAG, "✅ Socket desconectado com sucesso")
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao desconectar", e)
+            Log.e(TAG, "❌ Erro ao desconectar", e)
+            e.printStackTrace()
         }
     }
 
