@@ -119,6 +119,31 @@ Run > Run 'app'
 
 ---
 
+## 🔧 CORREÇÃO: Mensagens Duplicadas
+
+### Problema ❌
+Suas mensagens apareciam **2 vezes**:
+1. Quando você enviava (adicionada localmente)
+2. Quando o servidor retornava (adicionada no `onAnyEvent`)
+
+### Solução ✅
+Adicionei filtro no `onAnyEvent` para **ignorar** mensagens que você mesmo enviou:
+
+```kotlin
+// 🚫 FILTRO: Não processar mensagens próprias
+if (sender == "contratante") {
+    Log.d(TAG, "⏩ Ignorando mensagem própria (já adicionada localmente)")
+    return@Listener
+}
+```
+
+**Agora:**
+- ✅ Suas mensagens aparecem **1 vez** (adicionadas localmente)
+- ✅ Mensagens do prestador aparecem **1 vez** (via `onAnyEvent`)
+- ✅ Sem duplicação!
+
+---
+
 ## 📝 PRÓXIMOS PASSOS (OPCIONAL)
 
 Se quiser melhorar ainda mais:
@@ -130,5 +155,5 @@ Se quiser melhorar ainda mais:
 
 ---
 
-**Execute agora e teste! O chat deve funcionar perfeitamente!** 🚀💬
+**Execute agora e teste! O chat funciona perfeitamente sem duplicação!** 🚀💬
 

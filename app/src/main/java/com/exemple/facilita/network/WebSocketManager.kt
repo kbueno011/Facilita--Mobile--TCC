@@ -166,7 +166,14 @@ class WebSocketManager {
                         Log.d(TAG, "   👤 De: $userName ($sender)")
                         Log.d(TAG, "   🏠 ServicoId: $servicoId")
 
-                        // Adiciona à lista de mensagens
+                        // 🚫 FILTRO: Não processar mensagens que você mesmo enviou
+                        // (elas já foram adicionadas localmente no sendChatMessage)
+                        if (sender == "contratante") {
+                            Log.d(TAG, "⏩ Ignorando mensagem própria (já foi adicionada localmente)")
+                            return@Listener
+                        }
+
+                        // Adiciona SOMENTE mensagens do PRESTADOR
                         val currentMessages = _chatMessages.value.toMutableList()
                         currentMessages.add(
                             ChatMessage(
@@ -175,11 +182,11 @@ class WebSocketManager {
                                 sender = sender,
                                 userName = userName,
                                 timestamp = timestamp,
-                                isOwn = sender == "contratante" // Se você é contratante
+                                isOwn = false // Sempre false porque só processa mensagens do prestador
                             )
                         )
                         _chatMessages.value = currentMessages
-                        Log.d(TAG, "✅ Mensagem adicionada! Total de mensagens: ${currentMessages.size}")
+                        Log.d(TAG, "✅ Mensagem do PRESTADOR adicionada! Total: ${currentMessages.size}")
                     }
                 } else {
                     val eventName = firstArg as? String ?: "unknown"
