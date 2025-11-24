@@ -206,5 +206,26 @@ fun AppNavHost(navController: NavHostController) {
             )
         }
 
+        // Tela de Chat em tempo real
+        composable(
+            route = "tela_chat/{servicoId}/{prestadorNome}/{prestadorTelefone}/{prestadorPlaca}/{prestadorId}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("prestadorNome") { type = NavType.StringType },
+                navArgument("prestadorTelefone") { type = NavType.StringType },
+                navArgument("prestadorPlaca") { type = NavType.StringType },
+                navArgument("prestadorId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            TelaChat(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "",
+                prestadorNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador",
+                prestadorTelefone = backStackEntry.arguments?.getString("prestadorTelefone") ?: "",
+                prestadorPlaca = backStackEntry.arguments?.getString("prestadorPlaca") ?: "",
+                prestadorId = backStackEntry.arguments?.getInt("prestadorId") ?: 0
+            )
+        }
+
     }
 }

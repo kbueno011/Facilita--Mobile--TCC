@@ -354,11 +354,13 @@ fun TelaRastreamentoServico(
         }
     }
 
-    // Limpa WebSocket ao sair da tela
+    // NÃO desconecta WebSocket ao sair - o chat também usa a mesma conexão!
+    // A conexão será mantida enquanto o serviço estiver em andamento
     DisposableEffect(Unit) {
         onDispose {
-            Log.d("TelaRastreamento", "🔌 Desconectando WebSocket...")
-            webSocketManager.disconnect()
+            Log.d("TelaRastreamento", "📱 Saindo da tela (WebSocket permanece ativo)")
+            // NÃO chama webSocketManager.disconnect()
+            // Motivo: Chat e outras telas precisam da mesma conexão
         }
     }
 
@@ -898,10 +900,20 @@ fun TelaRastreamentoServico(
                         Text("Ligar", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    // Botão Chat
+                    // Botão Chat (funcional)
                     OutlinedButton(
                         onClick = {
-                            Toast.makeText(context, "Chat em breve!", Toast.LENGTH_SHORT).show()
+                            val prestadorIdValue = servico?.prestador?.id ?: 0
+                            val prestadorPlaca = servico?.prestador?.veiculo?.placa ?: ""
+
+                            Log.d("TelaRastreamento", "💬 Abrindo chat:")
+                            Log.d("TelaRastreamento", "   ServicoId: $servicoId")
+                            Log.d("TelaRastreamento", "   PrestadorId: $prestadorIdValue")
+                            Log.d("TelaRastreamento", "   PrestadorNome: $prestadorNome")
+
+                            navController.navigate(
+                                "tela_chat/$servicoId/$prestadorNome/$prestadorTelefone/$prestadorPlaca/$prestadorIdValue"
+                            )
                         },
                         modifier = Modifier
                             .weight(1f)
