@@ -249,12 +249,18 @@ fun TelaRastreamentoServico(
         Log.d("TelaRastreamento", "📊 Status atual: $status")
 
         when (status) {
-            "CONCLUIDO" -> {
-                Toast.makeText(context, "✅ Serviço concluído com sucesso!", Toast.LENGTH_LONG).show()
+            "CONCLUIDO", "FINALIZADO" -> {
+                Log.d("TelaRastreamento", "🎉 Serviço FINALIZADO - Navegando para tela de finalização")
+                Toast.makeText(context, "🎉 O prestador chegou ao destino!", Toast.LENGTH_LONG).show()
                 webSocketManager.disconnect()
-                delay(2000)
-                navController.navigate("tela_home") {
-                    popUpTo("tela_home") { inclusive = true }
+                delay(1000)
+
+                // Obtém informações do serviço para passar para as próximas telas
+                val prestadorNome = servico?.prestador?.usuario?.nome ?: "Prestador"
+                val valorServico = servico?.valor ?: "0.00"
+
+                navController.navigate("tela_finalizacao/$servicoId/$prestadorNome/$valorServico") {
+                    popUpTo("tela_rastreamento_servico/$servicoId") { inclusive = true }
                 }
             }
             "CANCELADO" -> {

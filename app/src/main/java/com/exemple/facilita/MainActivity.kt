@@ -193,6 +193,40 @@ fun AppNavHost(navController: NavHostController) {
             )
         }
 
+        // Tela de finalização do serviço
+        composable(
+            route = "tela_finalizacao/{servicoId}/{prestadorNome}/{valorServico}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("prestadorNome") { type = NavType.StringType },
+                navArgument("valorServico") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaFinalizacaoServico(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "0",
+                prestadorNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador",
+                valorServico = backStackEntry.arguments?.getString("valorServico") ?: "0.00"
+            )
+        }
+
+        // Tela de avaliação do serviço
+        composable(
+            route = "tela_avaliacao/{servicoId}/{prestadorNome}/{valorServico}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("prestadorNome") { type = NavType.StringType },
+                navArgument("valorServico") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaAvaliacaoCliente(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "0",
+                prestadorNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador",
+                valorServico = backStackEntry.arguments?.getString("valorServico") ?: "0.00"
+            )
+        }
+
         // Tela de corrida em andamento (tempo real)
         composable(
             route = "tela_corrida_andamento/{servicoId}",

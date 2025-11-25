@@ -1,23 +1,12 @@
 package com.exemple.facilita.screens
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,12 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,13 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
 import com.exemple.facilita.components.BottomNavBar
 import com.exemple.facilita.model.PedidoApi
 import com.exemple.facilita.service.RetrofitFactory
 import com.exemple.facilita.utils.TokenManager
-import com.exemple.facilita.utils.sdp
-import com.exemple.facilita.utils.ssp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -302,7 +286,23 @@ fun TelaPedidosHistorico(navController: NavController) {
         selectedPedido?.let { pedido ->
             PedidoDetalhesModal(
                 pedido = pedido,
-                onDismiss = { selectedPedido = null }
+                onDismiss = { selectedPedido = null },
+                onPedidoCancelado = {
+                    // Recarregar a lista de pedidos após cancelamento
+                    scope.launch {
+                        try {
+                            val token = TokenManager.obterToken(context)
+                            if (token != null) {
+                                val response = service.buscarHistoricoPedidos("Bearer $token")
+                                if (response.isSuccessful && response.body() != null) {
+                                    pedidos = response.body()!!.data.pedidos
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("PEDIDOS_API", "Erro ao recarregar pedidos", e)
+                        }
+                    }
+                }
             )
         }
     }
@@ -327,11 +327,6 @@ fun PedidoCardModerno(pedido: PedidoApi, index: Int, onClick: () -> Unit) {
         label = "scale"
     )
 
-    val alpha by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(400),
-        label = "alpha"
-    )
 
     Card(
         modifier = Modifier
@@ -438,36 +433,6 @@ fun PedidoCardModerno(pedido: PedidoApi, index: Int, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Foto do prestador com borda gradiente
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .border(
-                                width = 2.dp,
-                                brush = Brush.linearGradient(
-                                    listOf(Color(0xFF019D31), Color(0xFF06C755))
-                                ),
-                                shape = CircleShape
-                            )
-                            .padding(3.dp)
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = if (pedido.prestador != null) {
-                                    "https://i.pravatar.cc/150?u=${pedido.prestador.usuario?.email ?: "default"}"
-                                } else {
-                                    "https://i.pravatar.cc/150?img=1"
-                                }
-                            ),
-                            contentDescription = "Foto do prestador",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -541,7 +506,10 @@ fun PedidoCardModerno(pedido: PedidoApi, index: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun PedidoDetalhesModal(pedido: PedidoApi, onDismiss: () -> Unit) {
+fun PedidoDetalhesModal(pedido: PedidoApi, onDismiss: () -> Unit, onPedidoCancelado: () -> Unit = {}) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
@@ -587,34 +555,6 @@ fun PedidoDetalhesModal(pedido: PedidoApi, onDismiss: () -> Unit) {
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Foto grande do prestador
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .border(
-                                        width = 3.dp,
-                                        color = Color.White,
-                                        shape = CircleShape
-                                    )
-                                    .padding(3.dp)
-                            ) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(
-                                        model = if (pedido.prestador != null) {
-                                            "https://i.pravatar.cc/150?u=${pedido.prestador.usuario?.email ?: "default"}"
-                                        } else {
-                                            "https://i.pravatar.cc/150?img=1"
-                                        }
-                                    ),
-                                    contentDescription = "Foto do prestador",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
                                 text = String.format(Locale.getDefault(), "Pedido #RVJ9G%02d", pedido.id % 100),
@@ -746,6 +686,172 @@ fun PedidoDetalhesModal(pedido: PedidoApi, onDismiss: () -> Unit) {
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
+
+                        // Botão de cancelar (apenas para pedidos que podem ser cancelados)
+                        if (pedido.status == "PENDENTE" || pedido.status == "EM_ANDAMENTO") {
+                            var mostrarDialogoCancelamento by remember { mutableStateOf(false) }
+                            var cancelando by remember { mutableStateOf(false) }
+                            var erroCancelamento by remember { mutableStateOf<String?>(null) }
+
+                            Button(
+                                onClick = { mostrarDialogoCancelamento = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(54.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                contentPadding = PaddingValues(),
+                                shape = RoundedCornerShape(27.dp),
+                                enabled = !cancelando
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            brush = Brush.horizontalGradient(
+                                                listOf(Color(0xFFD32F2F), Color(0xFFEF5350))
+                                            ),
+                                            shape = RoundedCornerShape(27.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (cancelando) {
+                                        CircularProgressIndicator(
+                                            color = Color.White,
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Cancelar",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Cancelar Pedido",
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (erroCancelamento != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = erroCancelamento!!,
+                                    color = Color.Red,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Diálogo de confirmação
+                            if (mostrarDialogoCancelamento) {
+                                AlertDialog(
+                                    onDismissRequest = { mostrarDialogoCancelamento = false },
+                                    icon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = "Aviso",
+                                            tint = Color(0xFFFFA726),
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                    },
+                                    title = {
+                                        Text(
+                                            text = "Cancelar Pedido",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            text = "Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.",
+                                            fontSize = 14.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                mostrarDialogoCancelamento = false
+                                                cancelando = true
+                                                erroCancelamento = null
+
+                                                scope.launch {
+                                                    try {
+                                                        val token = TokenManager.obterToken(context)
+                                                        if (token == null) {
+                                                            erroCancelamento = "Token não encontrado"
+                                                            cancelando = false
+                                                            return@launch
+                                                        }
+
+                                                        Log.d("CANCELAR_PEDIDO", "Iniciando cancelamento do pedido ID: ${pedido.id}")
+
+                                                        val servicoApiService = RetrofitFactory.servicoApiService
+                                                        val response = servicoApiService.cancelarServico(
+                                                            "Bearer $token",
+                                                            pedido.id.toString()
+                                                        )
+
+                                                        Log.d("CANCELAR_PEDIDO", "Response code: ${response.code()}")
+                                                        Log.d("CANCELAR_PEDIDO", "Response successful: ${response.isSuccessful}")
+                                                        Log.d("CANCELAR_PEDIDO", "Response body: ${response.body()}")
+
+                                                        if (response.isSuccessful) {
+                                                            val body = response.body()
+                                                            if (body != null && body.statusCode == 200) {
+                                                                Log.d("CANCELAR_PEDIDO", "Pedido cancelado com sucesso!")
+                                                                onPedidoCancelado()
+                                                                onDismiss()
+                                                            } else if (body != null) {
+                                                                // API retornou sucesso mas com statusCode diferente
+                                                                erroCancelamento = body.message ?: "Erro ao cancelar pedido"
+                                                                Log.e("CANCELAR_PEDIDO", "StatusCode da API: ${body.statusCode}, Message: ${body.message}")
+                                                            } else {
+                                                                erroCancelamento = "Resposta vazia da API"
+                                                                Log.e("CANCELAR_PEDIDO", "Response body é null")
+                                                            }
+                                                        } else {
+                                                            val errorBody = response.errorBody()?.string()
+                                                            erroCancelamento = "Erro ${response.code()}: ${errorBody ?: "Erro desconhecido"}"
+                                                            Log.e("CANCELAR_PEDIDO", "Erro HTTP ${response.code()}: $errorBody")
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        erroCancelamento = "Erro: ${e.message}"
+                                                        Log.e("CANCELAR_PEDIDO", "Exceção ao cancelar pedido", e)
+                                                        e.printStackTrace()
+                                                    } finally {
+                                                        cancelando = false
+                                                    }
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFFD32F2F)
+                                            )
+                                        ) {
+                                            Text("Sim, cancelar")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { mostrarDialogoCancelamento = false }) {
+                                            Text("Não")
+                                        }
+                                    }
+                                )
+                            }
+                        }
 
                         // Botão fechar
                         Button(

@@ -31,9 +31,14 @@ import androidx.navigation.compose.rememberNavController
 
 
 @Composable
-fun TelaAvaliacaoCliente(navController: NavController) {
+fun TelaAvaliacaoCliente(
+    navController: NavController,
+    servicoId: String = "0",
+    prestadorNome: String = "Prestador",
+    valorServico: String = "0.00"
+) {
     var avaliacao by remember { mutableStateOf(5) }
-    var comentario by remember { mutableStateOf("O prestador foi pontual e atencioso.") }
+    var comentario by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -103,12 +108,12 @@ fun TelaAvaliacaoCliente(navController: NavController) {
 
         // 🔹 Nome e serviço
         Text(
-            text = "José Silva",
+            text = prestadorNome,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp
         )
         Text(
-            text = "Acompanhamento à consulta - 09/09/2025",
+            text = "Serviço concluído - R$ $valorServico",
             color = Color.Gray,
             fontSize = 14.sp
         )
@@ -189,6 +194,11 @@ fun TelaAvaliacaoCliente(navController: NavController) {
                 .clickable {
                     // Enviar avaliação aqui
                     println("Avaliação: $avaliacao estrelas - $comentario")
+                    // TODO: Implementar chamada à API para enviar avaliação
+                    // Por enquanto, navega para home
+                    navController.navigate("tela_home") {
+                        popUpTo("tela_home") { inclusive = true }
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
