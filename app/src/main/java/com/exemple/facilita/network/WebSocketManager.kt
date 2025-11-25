@@ -37,8 +37,15 @@ class WebSocketManager {
         }
     }
 
+    // 🔥 NOVA PROPRIEDADE: Armazena dados de conexão para reenviar após reconexão
+    private var connectionData: Triple<Int, String, String>? = null
+    private var pendingJoinServico: String? = null
+
     fun connect(userId: Int, userType: String, userName: String) {
         try {
+            // Armazena dados de conexão
+            connectionData = Triple(userId, userType, userName)
+
             val options = IO.Options().apply {
                 reconnection = true
                 reconnectionAttempts = Integer.MAX_VALUE
@@ -50,31 +57,44 @@ class WebSocketManager {
 
             socket = IO.socket(SERVER_URL, options)
 
-            Log.d(TAG, "📡 Registrando listeners...")
+            Log.d(TAG, "")
+            Log.d(TAG, "╔════════════════════════════════════════════════╗")
+            Log.d(TAG, "║  📡 REGISTRANDO LISTENERS DO WEBSOCKET        ║")
+            Log.d(TAG, "╚════════════════════════════════════════════════╝")
+
             socket?.on(Socket.EVENT_CONNECT, onConnect)
+            Log.d(TAG, "✅ Listener: EVENT_CONNECT")
+
             socket?.on(Socket.EVENT_DISCONNECT, onDisconnect)
+            Log.d(TAG, "✅ Listener: EVENT_DISCONNECT")
+
             socket?.on(Socket.EVENT_CONNECT_ERROR, onConnectError)
+            Log.d(TAG, "✅ Listener: EVENT_CONNECT_ERROR")
+
             socket?.on("location_updated", onLocationUpdated)
+            Log.d(TAG, "✅ Listener: location_updated (LOCALIZAÇÃO DO PRESTADOR)")
+
             socket?.on("connect_response", onConnectResponse)
+            Log.d(TAG, "✅ Listener: connect_response")
+
             socket?.on("servico_joined", onServicoJoined)
+            Log.d(TAG, "✅ Listener: servico_joined (CONFIRMAÇÃO DE ENTRADA NA SALA)")
+
             socket?.on("receive_message", onReceiveMessage)
+            Log.d(TAG, "✅ Listener: receive_message (MENSAGENS DE CHAT)")
 
-            // 🔍 Testar variações do nome do evento (caso o backend use nome diferente)
-            socket?.on("message_received", onAnyEvent)  // Variação 1
-            socket?.on("new_message", onAnyEvent)       // Variação 2
-            socket?.on("chat_message", onAnyEvent)      // Variação 3
-            socket?.on("message", onAnyEvent)           // Variação 4
+            Log.d(TAG, "")
+            Log.d(TAG, "📊 TOTAL DE LISTENERS: 7 específicos + diagnóstico")
+            Log.d(TAG, "")
+            Log.d(TAG, "🔍 MODO DIAGNÓSTICO ATIVADO:")
+            Log.d(TAG, "   Todos os eventos recebidos serão logados em tempo real")
+            Log.d(TAG, "")
 
-            Log.d(TAG, "✅ Listener 'receive_message' REGISTRADO!")
-            Log.d(TAG, "📊 Total de listeners registrados: 11 (+ 4 variações de teste)")
+            // 🔥 DIAGNÓSTICO: Intercepta TODAS as emissões/recepções
+            setupEventLogger()
 
             socket?.connect()
 
-            // Envia dados de conexão após conectar
-            socket?.on(Socket.EVENT_CONNECT) {
-                Log.d(TAG, "Socket conectado, enviando user_connected")
-                emitUserConnected(userId, userType, userName)
-            }
 
         } catch (e: URISyntaxException) {
             Log.e(TAG, "Erro ao conectar WebSocket", e)
@@ -82,40 +102,167 @@ class WebSocketManager {
         }
     }
 
+    /**
+     * 🔍 DIAGNÓSTICO: Registra todos os eventos recebidos do servidor
+     * Útil para descobrir se o servidor está enviando eventos com nomes diferentes
+     */
+    private fun setupEventLogger() {
+        // Lista de eventos conhecidos do Socket.IO
+        val knownEvents = listOf(
+            Socket.EVENT_CONNECT,
+            Socket.EVENT_DISCONNECT,
+            Socket.EVENT_CONNECT_ERROR,
+            "location_updated",
+            "connect_response",
+            "servico_joined",
+            "receive_message"
+        )
+
+        // Registra listener para cada evento conhecido
+        knownEvents.forEach { eventName ->
+            socket?.on(eventName) { args ->
+                Log.d(TAG, "")
+                Log.d(TAG, "╔════════════════════════════════════════════════╗")
+                Log.d(TAG, "║  🔔 EVENTO RECEBIDO: $eventName")
+                Log.d(TAG, "╚════════════════════════════════════════════════╝")
+                Log.d(TAG, "📊 Total de args: ${args.size}")
+                args.forEachIndexed { index, arg ->
+                    when (arg) {
+                        is JSONObject -> {
+                            Log.d(TAG, "📦 Arg[$index] (JSONObject):")
+                            Log.d(TAG, arg.toString(2))
+                        }
+                        else -> {
+                            Log.d(TAG, "📦 Arg[$index]: $arg (${arg?.javaClass?.simpleName})")
+                        }
+                    }
+                }
+                Log.d(TAG, "")
+            }
+        }
+
+        // Tenta capturar eventos desconhecidos (se o Socket.IO suportar)
+        try {
+            // Registra listener para eventos comuns que podem ter nomes diferentes
+            val possibleEventNames = listOf(
+                "location_update",
+                "locationUpdate",
+                "prestador_location",
+                "prestadorLocation",
+                "position_update",
+                "positionUpdate",
+                "message",
+                "chat_message",
+                "chatMessage",
+                "new_message",
+                "newMessage"
+            )
+
+            possibleEventNames.forEach { eventName ->
+                socket?.on(eventName) { args ->
+                    Log.d(TAG, "")
+                    Log.d(TAG, "🚨🚨🚨 EVENTO ALTERNATIVO DETECTADO: $eventName 🚨🚨🚨")
+                    Log.d(TAG, "📊 Args: ${args.size}")
+                    args.forEachIndexed { index, arg ->
+                        Log.d(TAG, "📦 Arg[$index]: $arg")
+                    }
+                    Log.d(TAG, "")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Não foi possível registrar listeners alternativos", e)
+        }
+    }
+
     private fun emitUserConnected(userId: Int, userType: String, userName: String) {
         try {
+            Log.d(TAG, "")
+            Log.d(TAG, "╔════════════════════════════════════════════════╗")
+            Log.d(TAG, "║  👤 ENVIANDO IDENTIFICAÇÃO DO USUÁRIO         ║")
+            Log.d(TAG, "╚════════════════════════════════════════════════╝")
+
             val data = JSONObject().apply {
                 put("userId", userId)
                 put("userType", userType)
                 put("userName", userName)
             }
+
+            Log.d(TAG, "📤 Dados enviados:")
+            Log.d(TAG, data.toString(2))
+            Log.d(TAG, "🔌 Socket conectado? ${socket?.connected()}")
+            Log.d(TAG, "📡 Emitindo evento: user_connected")
+
             socket?.emit("user_connected", data)
-            Log.d(TAG, "user_connected emitido: $data")
+
+            Log.d(TAG, "✅ Evento user_connected emitido com sucesso!")
+            Log.d(TAG, "⏳ Aguardando resposta do servidor (connect_response)...")
+            Log.d(TAG, "")
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao emitir user_connected", e)
+            Log.e(TAG, "❌ ERRO ao emitir user_connected", e)
+            e.printStackTrace()
         }
     }
 
     fun joinServico(servicoId: String) {
         try {
-            Log.d(TAG, "🚪 Entrando na sala do serviço: $servicoId")
+            Log.d(TAG, "")
+            Log.d(TAG, "╔════════════════════════════════════════════════╗")
+            Log.d(TAG, "║  🚪 ENTRANDO NA SALA DO SERVIÇO               ║")
+            Log.d(TAG, "╚════════════════════════════════════════════════╝")
+            Log.d(TAG, "🆔 ServicoId: $servicoId")
+            Log.d(TAG, "🔌 Socket conectado? ${socket?.connected()}")
+
+            if (socket?.connected() != true) {
+                Log.w(TAG, "⚠️ Socket ainda não está conectado!")
+                Log.w(TAG, "   Armazenando servicoId para entrar na sala após conexão...")
+                pendingJoinServico = servicoId
+                Log.d(TAG, "✅ Join pendente armazenado. Será processado ao conectar.")
+                Log.d(TAG, "")
+                return
+            }
+
+            Log.d(TAG, "📡 Emitindo evento: join_servico")
             socket?.emit("join_servico", servicoId)
-            Log.d(TAG, "✅ Evento join_servico emitido com sucesso")
+            Log.d(TAG, "✅ Evento join_servico emitido com sucesso!")
+            Log.d(TAG, "⏳ Aguardando confirmação do servidor (servico_joined)...")
+            Log.d(TAG, "")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erro ao entrar no serviço $servicoId", e)
+            Log.e(TAG, "❌ ERRO CRÍTICO ao entrar no serviço $servicoId", e)
             e.printStackTrace()
         }
     }
 
     private val onServicoJoined = Emitter.Listener { args ->
         try {
+            Log.d(TAG, "")
+            Log.d(TAG, "╔════════════════════════════════════════════════╗")
+            Log.d(TAG, "║  🎉 CONFIRMAÇÃO: ENTROU NA SALA!              ║")
+            Log.d(TAG, "╚════════════════════════════════════════════════╝")
+
+            if (args.isEmpty()) {
+                Log.w(TAG, "⚠️ Resposta sem dados do servidor")
+                return@Listener
+            }
+
             val data = args[0] as? JSONObject
-            Log.d(TAG, "🎉 Resposta de servico_joined: $data")
+            Log.d(TAG, "📦 Dados da resposta:")
+            Log.d(TAG, data?.toString(2) ?: "null")
+
             val servicoId = data?.optString("servicoId", "")
             val message = data?.optString("message", "")
-            Log.d(TAG, "✅ Entrou com sucesso no serviço $servicoId: $message")
+
+            Log.d(TAG, "")
+            Log.d(TAG, "✅ SUCESSO!")
+            Log.d(TAG, "   🆔 ServicoId: $servicoId")
+            Log.d(TAG, "   💬 Mensagem: $message")
+            Log.d(TAG, "")
+            Log.d(TAG, "🎯 AGORA VOCÊ IRÁ RECEBER:")
+            Log.d(TAG, "   📍 Atualizações de localização do prestador")
+            Log.d(TAG, "   💬 Mensagens de chat do prestador")
+            Log.d(TAG, "")
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao processar resposta de servico_joined", e)
+            Log.e(TAG, "❌ Erro ao processar resposta de servico_joined", e)
+            e.printStackTrace()
         }
     }
 
@@ -134,83 +281,52 @@ class WebSocketManager {
         }
     }
 
-    /**
-     * 🔍 CATCH-ALL: Captura QUALQUER evento que chegar do servidor
-     * Usado para capturar mensagens que vêm sem nome de evento específico
-     */
-    private val onAnyEvent = Emitter.Listener { args ->
-        try {
-            if (args.isNotEmpty()) {
-                val firstArg = args[0]
-
-                // Verifica se é um JSONObject com dados de mensagem
-                if (firstArg is JSONObject) {
-                    Log.d(TAG, "🔥🔥🔥 EVENTO GENÉRICO CAPTURADO")
-                    Log.d(TAG, "   Total de args: ${args.size}")
-                    Log.d(TAG, "   Arg[0]: $firstArg")
-
-                    // Verifica se tem os campos de mensagem
-                    if (firstArg.has("mensagem") && firstArg.has("servicoId")) {
-                        Log.d(TAG, "✅ É uma mensagem de chat! Processando...")
-
-                        val servicoId = firstArg.optInt("servicoId", 0)
-                        val mensagem = firstArg.optString("mensagem", "")
-                        val sender = firstArg.optString("sender", "")
-                        val timestamp = firstArg.optLong("timestamp", System.currentTimeMillis())
-
-                        // Extrai informações do remetente
-                        val senderInfo = firstArg.optJSONObject("senderInfo")
-                        val userName = senderInfo?.optString("userName", "Usuário") ?: "Usuário"
-
-                        Log.d(TAG, "   📨 Mensagem: $mensagem")
-                        Log.d(TAG, "   👤 De: $userName ($sender)")
-                        Log.d(TAG, "   🏠 ServicoId: $servicoId")
-
-                        // 🚫 FILTRO: Não processar mensagens que você mesmo enviou
-                        // (elas já foram adicionadas localmente no sendChatMessage)
-                        if (sender == "contratante") {
-                            Log.d(TAG, "⏩ Ignorando mensagem própria (já foi adicionada localmente)")
-                            return@Listener
-                        }
-
-                        // Adiciona SOMENTE mensagens do PRESTADOR
-                        val currentMessages = _chatMessages.value.toMutableList()
-                        currentMessages.add(
-                            ChatMessage(
-                                servicoId = servicoId,
-                                mensagem = mensagem,
-                                sender = sender,
-                                userName = userName,
-                                timestamp = timestamp,
-                                isOwn = false // Sempre false porque só processa mensagens do prestador
-                            )
-                        )
-                        _chatMessages.value = currentMessages
-                        Log.d(TAG, "✅ Mensagem do PRESTADOR adicionada! Total: ${currentMessages.size}")
-                    }
-                } else {
-                    val eventName = firstArg as? String ?: "unknown"
-                    Log.d(TAG, "🔥 EVENTO GENÉRICO: $eventName")
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Erro ao processar evento genérico", e)
-            e.printStackTrace()
-        }
-    }
 
     private val onConnect = Emitter.Listener {
-        Log.d(TAG, "✅ Socket conectado!")
-        Log.d(TAG, "   Atualizando _isConnected para TRUE")
+        Log.d(TAG, "")
+        Log.d(TAG, "╔════════════════════════════════════════════════╗")
+        Log.d(TAG, "║  ✅ WEBSOCKET CONECTADO COM SUCESSO!          ║")
+        Log.d(TAG, "╚════════════════════════════════════════════════╝")
+        Log.d(TAG, "📡 URL: $SERVER_URL")
+        Log.d(TAG, "🔌 Estado da conexão: CONECTADO")
+        Log.d(TAG, "⏰ Timestamp: ${System.currentTimeMillis()}")
         _isConnected.value = true
-        Log.d(TAG, "   Estado atual: isConnected = ${_isConnected.value}")
+        Log.d(TAG, "✅ _isConnected atualizado para: ${_isConnected.value}")
+        Log.d(TAG, "")
+
+        // 🔥 ENVIA IDENTIFICAÇÃO DO USUÁRIO IMEDIATAMENTE APÓS CONECTAR
+        connectionData?.let { (userId, userType, userName) ->
+            Log.d(TAG, "🚀 Enviando identificação do usuário automaticamente...")
+            emitUserConnected(userId, userType, userName)
+        }
+
+        // 🔥 PROCESSA joinServico PENDENTE (se houver)
+        pendingJoinServico?.let { servicoId ->
+            Log.d(TAG, "🚀 Processando join_servico pendente: $servicoId")
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                joinServico(servicoId)
+                pendingJoinServico = null
+            }, 500) // Aguarda 500ms para garantir que user_connected foi processado
+        }
+
+        Log.d(TAG, "🎯 AGUARDANDO:")
+        Log.d(TAG, "   1️⃣ Entrada na sala do serviço (join_servico)")
+        Log.d(TAG, "   2️⃣ Atualizações de localização (location_updated)")
+        Log.d(TAG, "   3️⃣ Mensagens de chat (receive_message)")
+        Log.d(TAG, "")
     }
 
     private val onDisconnect = Emitter.Listener {
-        Log.w(TAG, "⚠️ Socket desconectado!")
-        Log.w(TAG, "   Atualizando _isConnected para FALSE")
+        Log.w(TAG, "")
+        Log.w(TAG, "╔════════════════════════════════════════════════╗")
+        Log.w(TAG, "║  ⚠️ WEBSOCKET DESCONECTADO!                   ║")
+        Log.w(TAG, "╚════════════════════════════════════════════════╝")
+        Log.w(TAG, "🔌 Estado da conexão: DESCONECTADO")
+        Log.w(TAG, "⏰ Timestamp: ${System.currentTimeMillis()}")
         _isConnected.value = false
-        Log.w(TAG, "   Estado atual: isConnected = ${_isConnected.value}")
+        Log.w(TAG, "❌ _isConnected atualizado para: ${_isConnected.value}")
+        Log.w(TAG, "🔄 Tentando reconectar automaticamente...")
+        Log.w(TAG, "")
     }
 
     private val onConnectError = Emitter.Listener { args ->
@@ -229,23 +345,55 @@ class WebSocketManager {
 
     private val onLocationUpdated = Emitter.Listener { args ->
         try {
-            Log.d(TAG, "🎯 Evento location_updated recebido! Args: ${args.size}")
+            Log.d(TAG, "═══════════════════════════════════════════════")
+            Log.d(TAG, "🎯 LOCALIZAÇÃO RECEBIDA DO PRESTADOR!")
+            Log.d(TAG, "═══════════════════════════════════════════════")
+            Log.d(TAG, "📊 Total de args: ${args.size}")
+
+            if (args.isEmpty()) {
+                Log.e(TAG, "❌ ERRO: Args vazio! Nenhum dado de localização recebido")
+                return@Listener
+            }
 
             val data = args[0] as JSONObject
-            Log.d(TAG, "📦 Dados recebidos: $data")
+            Log.d(TAG, "📦 Dados RAW completos:")
+            Log.d(TAG, data.toString(2)) // Pretty print JSON
 
             val servicoId = data.optInt("servicoId", 0)
             val latitude = data.optDouble("latitude", 0.0)
             val longitude = data.optDouble("longitude", 0.0)
             val prestadorName = data.optString("prestadorName", "")
+            val userId = data.optInt("userId", 0)
             val timestamp = data.optString("timestamp", "")
 
-            Log.d(TAG, "📍 Localização processada:")
-            Log.d(TAG, "   ServicoId: $servicoId")
-            Log.d(TAG, "   Latitude: $latitude")
-            Log.d(TAG, "   Longitude: $longitude")
-            Log.d(TAG, "   Prestador: $prestadorName")
-            Log.d(TAG, "   Timestamp: $timestamp")
+            Log.d(TAG, "")
+            Log.d(TAG, "═══════════════════════════════════════════════")
+            Log.d(TAG, "📍 LOCALIZAÇÃO DO PRESTADOR RECEBIDA:")
+            Log.d(TAG, "═══════════════════════════════════════════════")
+            Log.d(TAG, "   🆔 ServicoId: $servicoId")
+            Log.d(TAG, "   👤 Prestador: $prestadorName")
+            Log.d(TAG, "   👤 UserId: $userId")
+            Log.d(TAG, "   🌍 Latitude: $latitude")
+            Log.d(TAG, "   🌍 Longitude: $longitude")
+            Log.d(TAG, "   ⏰ Timestamp: $timestamp")
+            Log.d(TAG, "")
+
+            // Validação de coordenadas
+            if (latitude == 0.0 && longitude == 0.0) {
+                Log.w(TAG, "⚠️ AVISO: Coordenadas zeradas!")
+                Log.w(TAG, "   Possíveis causas:")
+                Log.w(TAG, "   • Prestador não ativou GPS")
+                Log.w(TAG, "   • Permissões de localização negadas")
+                Log.w(TAG, "   • Prestador ainda não iniciou rastreamento")
+            } else {
+                Log.d(TAG, "✅ ✅ ✅ COORDENADAS VÁLIDAS RECEBIDAS! ✅ ✅ ✅")
+                Log.d(TAG, "")
+                Log.d(TAG, "🎯 O PRESTADOR ESTÁ CONECTADO E ENVIANDO LOCALIZAÇÃO!")
+                Log.d(TAG, "")
+                Log.d(TAG, "📍 Posição atual:")
+                Log.d(TAG, "   Lat: $latitude")
+                Log.d(TAG, "   Lng: $longitude")
+            }
 
             val update = LocationUpdate(
                 servicoId = servicoId,
@@ -256,10 +404,15 @@ class WebSocketManager {
             )
 
             _locationUpdate.value = update
+            Log.d(TAG, "")
             Log.d(TAG, "✅ LocationUpdate atualizado no StateFlow!")
+            Log.d(TAG, "📊 Valor atualizado: Lat=$latitude, Lng=$longitude")
+            Log.d(TAG, "🔔 Telas observando este StateFlow serão notificadas!")
+            Log.d(TAG, "═══════════════════════════════════════════════")
+            Log.d(TAG, "")
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erro ao processar location_updated", e)
+            Log.e(TAG, "❌ ERRO CRÍTICO ao processar location_updated", e)
             e.printStackTrace()
         }
     }

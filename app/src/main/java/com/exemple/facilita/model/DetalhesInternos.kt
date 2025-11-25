@@ -4,5 +4,5 @@ data class DetalhesInternos(
     val categoria: Int,
     val distancia_km: Double,
     val tarifa_por_km: Double,
-    val valor_minimo: Int
+    val valor_minimo: Double
 ): Serializable

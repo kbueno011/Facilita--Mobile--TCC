@@ -3,11 +3,15 @@ package com.exemple.facilita.screens
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -19,6 +23,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import com.exemple.facilita.network.WebSocketManager
 import com.exemple.facilita.network.ChatMessage
 import com.exemple.facilita.utils.TokenManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -114,108 +122,129 @@ fun TelaChat(
         }
     }
 
+    // 🎨 DESIGN FUTURISTA E MINIMALISTA
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFE7E7E7))
+            .background(Color(0xFFF8F9FA))
             .statusBarsPadding()
     ) {
-        // Topo verde com informações do prestador
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 🟢 HEADER FUTURISTA - DESIGN CLEAN
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = greenColor,
-            tonalElevation = 4.dp
+            shadowElevation = 4.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botão voltar
-                IconButton(onClick = { navController.popBackStack() }) {
+                // Botão voltar minimalista
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.15f),
+                            CircleShape
+                        )
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Informações do prestador
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Avatar futurista com inicial
+                Box(
+                    modifier = Modifier
+                        .size(45.dp)
+                        .background(Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Text(
+                        text = prestadorNome.firstOrNull()?.uppercase() ?: "P",
+                        color = greenColor,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    // Indicador de status (sem animação)
+                    if (isConnected) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(12.dp)
+                                .background(Color(0xFF00E676), CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Info do prestador - design clean
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = prestadorNome,
                         color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    if (prestadorPlaca.isNotEmpty()) {
-                        Text(
-                            text = prestadorPlaca,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 13.sp
-                        )
-                    }
-                    // Status de conexão
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(
-                                    if (isConnected) Color(0xFF00FF00) else Color(0xFFFF0000),
-                                    androidx.compose.foundation.shape.CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isConnected) "Online" else "Offline",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 11.sp
-                        )
-                    }
+                    Text(
+                        text = if (isConnected) "Online" else "Offline",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp
+                    )
                 }
 
-                // Botão de ligar
-                IconButton(
-                    onClick = {
-                        if (prestadorTelefone.isNotEmpty()) {
+                // Botão de ligar (se disponível)
+                if (prestadorTelefone.isNotEmpty()) {
+                    IconButton(
+                        onClick = {
                             val intent = Intent(Intent.ACTION_DIAL).apply {
                                 data = Uri.parse("tel:$prestadorTelefone")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.15f),
+                                CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = "Ligar",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Phone,
-                        contentDescription = "Ligar",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
         }
 
-        // Lista de mensagens
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 💬 ÁREA DE MENSAGENS - DESIGN FUTURISTA
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color(0xFFF9F9F9))
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = 16.dp),
             state = listState
         ) {
+            // Data separadora
             item {
-                Spacer(modifier = Modifier.height(12.dp))
-                // Indicador de data
+                Spacer(modifier = Modifier.height(20.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -223,44 +252,65 @@ fun TelaChat(
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
-                        color = Color(0xFFF2F2F2),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFE8E8E8)
                     ) {
                         Text(
                             text = "Hoje",
-                            color = Color(0xFF7C7C7C),
-                            fontSize = 14.sp,
+                            color = Color(0xFF666666),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                     }
                 }
             }
 
+            // Estado vazio
             if (messages.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = 60.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.ChatBubbleOutline,
-                                contentDescription = null,
-                                tint = Color.Gray,
-                                modifier = Modifier.size(48.dp)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Ícone simples sem animação
+                            Box(
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .background(
+                                        greenColor.copy(alpha = 0.1f),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ChatBubbleOutline,
+                                    contentDescription = null,
+                                    tint = greenColor.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(35.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Sem mensagens",
+                                color = Color(0xFF666666),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Nenhuma mensagem ainda",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "Envie a primeira mensagem!",
+                                text = "Envie a primeira mensagem para iniciar\na conversa com o prestador!",
                                 color = Color.Gray.copy(alpha = 0.7f),
-                                fontSize = 12.sp
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
                             )
                         }
                     }
@@ -280,48 +330,77 @@ fun TelaChat(
             }
         }
 
-        // Caixa de texto para enviar mensagem
+        // 💬 CAMPO DE INPUT MODERNO
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color.White,
-            tonalElevation = 8.dp
+            shadowElevation = 12.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(12.dp)
                     .navigationBarsPadding(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
+                // Caixa de texto
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFFF5F5F5))
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .shadow(2.dp, RoundedCornerShape(28.dp))
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFFF9F9F9),
+                                    Color(0xFFFAFAFA)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (textState.text.isNotEmpty())
+                                greenColor.copy(alpha = 0.3f)
+                            else
+                                Color(0xFFE5E5E5),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .padding(horizontal = 18.dp, vertical = 14.dp)
                 ) {
                     if (textState.text.isEmpty()) {
-                        Text(
-                            text = "Enviar mensagem...",
-                            color = Color.Gray,
-                            fontSize = 15.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Message,
+                                contentDescription = null,
+                                tint = Color.Gray.copy(alpha = 0.5f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Digite sua mensagem...",
+                                color = Color.Gray.copy(alpha = 0.6f),
+                                fontSize = 15.sp
+                            )
+                        }
                     }
                     BasicTextField(
                         value = textState,
                         onValueChange = { textState = it },
                         textStyle = androidx.compose.ui.text.TextStyle(
-                            color = Color.Black,
-                            fontSize = 15.sp
+                            color = Color(0xFF1A1A1A),
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp
                         ),
                         modifier = Modifier.fillMaxWidth(),
-                        maxLines = 4
+                        maxLines = 5
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                // Botão enviar
+                // ✈️ BOTÃO ENVIAR - DESIGN FUTURISTA
+                val isEnabled = textState.text.isNotBlank() && isConnected
+
                 IconButton(
                     onClick = {
                         val mensagem = textState.text.trim()
@@ -334,18 +413,25 @@ fun TelaChat(
                                 targetUserId = prestadorId
                             )
                             textState = TextFieldValue("")
-                        } else {
-                            Log.w("TelaChat", "⚠️ Não pode enviar: mensagem vazia ou prestadorId inválido")
                         }
                     },
-                    enabled = textState.text.isNotBlank() && isConnected
+                    enabled = isEnabled,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .shadow(
+                            if (isEnabled) 4.dp else 1.dp,
+                            CircleShape
+                        )
+                        .background(
+                            if (isEnabled) greenColor else Color(0xFFE0E0E0),
+                            CircleShape
+                        )
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Enviar",
-                        tint = if (textState.text.isNotBlank() && isConnected)
-                            greenColor else Color.Gray,
-                        modifier = Modifier.size(26.dp)
+                        tint = if (isEnabled) Color.White else Color.Gray.copy(alpha = 0.5f),
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -353,6 +439,9 @@ fun TelaChat(
     }
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💬 COMPONENTE DE MENSAGEM - DESIGN FUTURISTA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @Composable
 fun ChatMessageItem(
     message: ChatMessage,
@@ -360,57 +449,101 @@ fun ChatMessageItem(
 ) {
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val timeText = dateFormat.format(Date(message.timestamp))
+    val isOwn = message.isOwn
 
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.isOwn) Alignment.End else Alignment.Start
+        horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.75f)
-                .padding(
-                    start = if (message.isOwn) 60.dp else 0.dp,
-                    end = if (message.isOwn) 0.dp else 60.dp
+        // Avatar do prestador (apenas para mensagens recebidas)
+        if (!isOwn) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(greenColor.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = greenColor,
+                    modifier = Modifier.size(18.dp)
                 )
-                .background(
-                    color = if (message.isOwn) greenColor else Color.White,
-                    shape = RoundedCornerShape(
-                        topStart = 12.dp,
-                        topEnd = 12.dp,
-                        bottomStart = if (message.isOwn) 12.dp else 2.dp,
-                        bottomEnd = if (message.isOwn) 2.dp else 12.dp
-                    )
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        // 💬 BOLHA DA MENSAGEM - DESIGN LIMPO
+        Surface(
+            modifier = Modifier.widthIn(max = 260.dp),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isOwn) 16.dp else 4.dp,
+                bottomEnd = if (isOwn) 4.dp else 16.dp
+            ),
+            color = if (isOwn) greenColor else Color.White,
+            shadowElevation = if (isOwn) 3.dp else 1.dp
         ) {
-            Column {
-                if (!message.isOwn) {
+            Column(
+                modifier = Modifier.padding(
+                    horizontal = 14.dp,
+                    vertical = 10.dp
+                )
+            ) {
+                // Nome (só para mensagens recebidas)
+                if (!isOwn) {
                     Text(
                         text = message.userName,
                         color = greenColor,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
 
+                // Texto da mensagem
                 Text(
                     text = message.mensagem,
-                    color = if (message.isOwn) Color.White else Color.Black,
-                    fontSize = 15.sp
+                    color = if (isOwn) Color.White else Color(0xFF1A1A1A),
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = timeText,
-                    color = if (message.isOwn) Color.White.copy(alpha = 0.8f)
-                    else Color.Gray,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Hora e status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = timeText,
+                        color = if (isOwn)
+                            Color.White.copy(alpha = 0.7f)
+                        else
+                            Color.Gray.copy(alpha = 0.6f),
+                        fontSize = 10.sp
+                    )
+
+                    // Check para mensagens enviadas
+                    if (isOwn) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Enviado",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                }
             }
+        }
+
+        // Avatar próprio (apenas para mensagens enviadas)
+        if (isOwn) {
+            Spacer(modifier = Modifier.width(8.dp))
         }
     }
 }

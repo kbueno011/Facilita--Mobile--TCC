@@ -69,18 +69,29 @@ fun TelaRastreamentoServico(
     val isSocketConnected by webSocketManager.isConnected.collectAsState()
     val locationUpdate by webSocketManager.locationUpdate.collectAsState()
 
-    // Posições no mapa - com atualização do WebSocket em tempo real
+    // Posições no mapa - SEMPRE atualizado via WebSocket em tempo real
     var prestadorLat by remember { mutableStateOf(0.0) }
     var prestadorLng by remember { mutableStateOf(0.0) }
+    var prestadorVisivel by remember { mutableStateOf(false) }
 
-    // Atualiza posição inicial do prestador quando o serviço carregar
+    // Log da configuração inicial (mas não usa API para posição)
     LaunchedEffect(servico?.prestador) {
         servico?.prestador?.let { prestador ->
-            if (prestador.latitudeAtual != null && prestador.longitudeAtual != null) {
-                prestadorLat = prestador.latitudeAtual
-                prestadorLng = prestador.longitudeAtual
-                Log.d("TelaRastreamento", "📍 Posição inicial do prestador: $prestadorLat, $prestadorLng")
-            }
+            Log.d("TelaRastreamento", "")
+            Log.d("TelaRastreamento", "╔════════════════════════════════════════════════╗")
+            Log.d("TelaRastreamento", "║  🚗 PRESTADOR CONECTADO AO SERVIÇO            ║")
+            Log.d("TelaRastreamento", "╚════════════════════════════════════════════════╝")
+            Log.d("TelaRastreamento", "   👤 Nome: ${prestador.usuario?.nome ?: "N/A"}")
+            Log.d("TelaRastreamento", "   📞 Telefone: ${prestador.usuario?.telefone ?: "N/A"}")
+            Log.d("TelaRastreamento", "")
+            Log.d("TelaRastreamento", "📡 LOCALIZAÇÃO EM TEMPO REAL")
+            Log.d("TelaRastreamento", "   • A posição será atualizada via WebSocket")
+            Log.d("TelaRastreamento", "   • Evento: location_updated")
+            Log.d("TelaRastreamento", "   • Intervalo: ~5 segundos")
+            Log.d("TelaRastreamento", "")
+            Log.d("TelaRastreamento", "⏳ Aguardando primeira posição via WebSocket...")
+            Log.d("TelaRastreamento", "╚════════════════════════════════════════════════╝")
+            Log.d("TelaRastreamento", "")
         }
     }
 
@@ -122,37 +133,83 @@ fun TelaRastreamentoServico(
         paradas.lastOrNull { it.tipo == "destino" }
     }
 
-    // Atualiza posição quando recebe do WebSocket - COM VALIDAÇÃO
+    // Atualiza posição quando recebe do WebSocket - COM VALIDAÇÃO MELHORADA
     LaunchedEffect(locationUpdate) {
         locationUpdate?.let { update ->
-            Log.d("TelaRastreamento", "📡 Recebido update WebSocket:")
-            Log.d("TelaRastreamento", "   ServicoId recebido: ${update.servicoId}")
-            Log.d("TelaRastreamento", "   ServicoId esperado: $servicoId")
-            Log.d("TelaRastreamento", "   Latitude: ${update.latitude}")
-            Log.d("TelaRastreamento", "   Longitude: ${update.longitude}")
-            Log.d("TelaRastreamento", "   Prestador: ${update.prestadorName}")
-            Log.d("TelaRastreamento", "   Timestamp: ${update.timestamp}")
+            Log.d("TelaRastreamento", "")
+            Log.d("TelaRastreamento", "╔════════════════════════════════════════════════╗")
+            Log.d("TelaRastreamento", "║  📡 ATUALIZAÇÃO DE LOCALIZAÇÃO RECEBIDA       ║")
+            Log.d("TelaRastreamento", "╚════════════════════════════════════════════════╝")
+            Log.d("TelaRastreamento", "   🆔 ServicoId recebido: ${update.servicoId}")
+            Log.d("TelaRastreamento", "   🎯 ServicoId esperado: $servicoId")
+            Log.d("TelaRastreamento", "   🌍 Latitude: ${update.latitude}")
+            Log.d("TelaRastreamento", "   🌍 Longitude: ${update.longitude}")
+            Log.d("TelaRastreamento", "   👤 Prestador: ${update.prestadorName}")
+            Log.d("TelaRastreamento", "   ⏰ Timestamp: ${update.timestamp}")
+            Log.d("TelaRastreamento", "")
 
-            if (update.servicoId.toString() == servicoId) {
-                // Validar se as coordenadas são válidas
-                if (update.latitude != 0.0 && update.longitude != 0.0) {
-                    val distanciaMovida = sqrt(
-                        (update.latitude - prestadorLat).pow(2.0) +
-                        (update.longitude - prestadorLng).pow(2.0)
-                    )
+            // Validar se é para este serviço
+            val servicoIdMatch = update.servicoId.toString() == servicoId
+            Log.d("TelaRastreamento", "🔍 Validações:")
+            Log.d("TelaRastreamento", "   • Serviço correto? $servicoIdMatch")
 
+            if (servicoIdMatch) {
+                // Validar se as coordenadas são válidas (não 0,0)
+                val coordenadasValidas = update.latitude != 0.0 && update.longitude != 0.0
+                Log.d("TelaRastreamento", "   • Coordenadas válidas? $coordenadasValidas")
+
+                if (coordenadasValidas) {
+                    val posAnteriorLat = prestadorLat
+                    val posAnteriorLng = prestadorLng
+                    val primeiraAtualizacao = !prestadorVisivel
+
+                    // ATUALIZA A POSIÇÃO
                     prestadorLat = update.latitude
                     prestadorLng = update.longitude
+                    prestadorVisivel = true
 
-                    Log.d("TelaRastreamento", "✅ Posição ATUALIZADA via WebSocket!")
-                    Log.d("TelaRastreamento", "   Nova posição: $prestadorLat, $prestadorLng")
-                    Log.d("TelaRastreamento", "   Distância movida: ${distanciaMovida * 111000} metros (aprox)")
+                    val distanciaMovida = sqrt(
+                        (update.latitude - posAnteriorLat).pow(2.0) +
+                        (update.longitude - posAnteriorLng).pow(2.0)
+                    ) * 111000 // Converte para metros
+
+                    Log.d("TelaRastreamento", "")
+                    Log.d("TelaRastreamento", "✅ ✅ ✅ MARCADOR DO PRESTADOR ATUALIZADO! ✅ ✅ ✅")
+                    Log.d("TelaRastreamento", "")
+                    if (primeiraAtualizacao) {
+                        Log.d("TelaRastreamento", "🎉 PRIMEIRA ATUALIZAÇÃO! Marcador agora VISÍVEL no mapa!")
+                    }
+                    Log.d("TelaRastreamento", "📍 Posição anterior: $posAnteriorLat, $posAnteriorLng")
+                    Log.d("TelaRastreamento", "📍 Nova posição: $prestadorLat, $prestadorLng")
+                    Log.d("TelaRastreamento", "📏 Distância movida: ${String.format("%.2f", distanciaMovida)} metros")
+                    Log.d("TelaRastreamento", "")
+                    Log.d("TelaRastreamento", "🗺️ MARCADOR:")
+                    Log.d("TelaRastreamento", "   • Tipo: Círculo azul pulsante (estilo Uber)")
+                    Log.d("TelaRastreamento", "   • Visível: SIM")
+                    Log.d("TelaRastreamento", "   • Coordenadas: LatLng($prestadorLat, $prestadorLng)")
+                    Log.d("TelaRastreamento", "")
+                    Log.d("TelaRastreamento", "🎥 Câmera seguirá automaticamente o prestador")
+                    Log.d("TelaRastreamento", "╚════════════════════════════════════════════════╝")
                 } else {
-                    Log.w("TelaRastreamento", "⚠️ Coordenadas inválidas recebidas (0,0)")
+                    Log.w("TelaRastreamento", "")
+                    Log.w("TelaRastreamento", "⚠️ COORDENADAS INVÁLIDAS RECEBIDAS (0,0)")
+                    Log.w("TelaRastreamento", "")
+                    Log.w("TelaRastreamento", "🔍 Possíveis causas:")
+                    Log.w("TelaRastreamento", "   • GPS do prestador está desativado")
+                    Log.w("TelaRastreamento", "   • Prestador negou permissão de localização")
+                    Log.w("TelaRastreamento", "   • Sinal GPS fraco")
+                    Log.w("TelaRastreamento", "")
+                    Log.w("TelaRastreamento", "⏳ Aguardando coordenadas válidas...")
+                    Log.w("TelaRastreamento", "╚════════════════════════════════════════════════╝")
                 }
             } else {
-                Log.w("TelaRastreamento", "⚠️ Update para serviço diferente - ignorado")
+                Log.w("TelaRastreamento", "")
+                Log.w("TelaRastreamento", "⚠️ UPDATE IGNORADO - Serviço diferente")
+                Log.w("TelaRastreamento", "   Esperado: $servicoId")
+                Log.w("TelaRastreamento", "   Recebido: ${update.servicoId}")
+                Log.w("TelaRastreamento", "╚════════════════════════════════════════════════╝")
             }
+            Log.d("TelaRastreamento", "")
         }
     }
 
@@ -430,52 +487,88 @@ fun TelaRastreamentoServico(
                 )
             }
 
-            // Marcador do PRESTADOR - Círculo azul pulsante MELHORADO (estilo Uber)
-            if (prestadorLat != 0.0 && prestadorLng != 0.0) {
-                // Halo pulsante grande (animação de radar)
+            // 🚗 MARCADOR DO PRESTADOR - Design Premium Estilo Uber/99
+            if (prestadorVisivel && prestadorLat != 0.0 && prestadorLng != 0.0) {
+                Log.d("TelaRastreamento", "🎨 Desenhando marcador do prestador em: $prestadorLat, $prestadorLng")
+
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 1: Halo Pulsante (Efeito de Radar)
+                // ══════════════════════════════════════════════════════════
                 Circle(
                     center = prestadorPos,
-                    radius = 60.0 * pulseAlpha,
-                    fillColor = Color(0x4000B0FF),
+                    radius = 80.0 * pulseAlpha, // Raio grande pulsante
+                    fillColor = Color(0x2000C853), // Verde translúcido
                     strokeColor = Color.Transparent,
                     strokeWidth = 0f
                 )
 
-                // Círculo médio (segunda camada)
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 2: Círculo Médio (Profundidade)
+                // ══════════════════════════════════════════════════════════
                 Circle(
                     center = prestadorPos,
-                    radius = 35.0,
-                    fillColor = Color(0x6000B0FF),
+                    radius = 45.0,
+                    fillColor = Color(0x4000C853), // Verde médio
                     strokeColor = Color.Transparent,
                     strokeWidth = 0f
                 )
 
-                // Círculo principal (azul sólido com borda branca grossa)
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 3: Círculo Principal Verde (FACILITA Brand)
+                // ══════════════════════════════════════════════════════════
+                Circle(
+                    center = prestadorPos,
+                    radius = 28.0,
+                    fillColor = Color(0xFF00C853), // Verde principal FACILITA
+                    strokeColor = Color.White,
+                    strokeWidth = 6f // Borda branca grossa
+                )
+
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 4: Sombra Interna (Profundidade)
+                // ══════════════════════════════════════════════════════════
                 Circle(
                     center = prestadorPos,
                     radius = 22.0,
-                    fillColor = Color(0xFF00B0FF),
-                    strokeColor = Color.White,
-                    strokeWidth = 5f
+                    fillColor = Color(0xE000A038), // Verde escuro
+                    strokeColor = Color.Transparent,
+                    strokeWidth = 0f
                 )
 
-                // Ícone de veículo/moto no centro (representado por círculo branco com borda)
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 5: Ícone Central (Veículo)
+                // ══════════════════════════════════════════════════════════
                 Circle(
                     center = prestadorPos,
-                    radius = 10.0,
+                    radius = 14.0,
                     fillColor = Color.White,
-                    strokeColor = Color(0xFF00B0FF),
-                    strokeWidth = 2f
+                    strokeColor = Color(0xFF00C853),
+                    strokeWidth = 3f
                 )
 
-                // Direção indicador (pequeno ponto verde na frente - simula movimento)
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 6: Indicador de Direção (Movimento)
+                // ══════════════════════════════════════════════════════════
                 Circle(
-                    center = LatLng(prestadorPos.latitude + 0.00005, prestadorPos.longitude),
-                    radius = 5.0,
-                    fillColor = Color(0xFF00FF00),
+                    center = LatLng(prestadorPos.latitude + 0.00008, prestadorPos.longitude),
+                    radius = 6.0,
+                    fillColor = Color(0xFF00FF00), // Verde brilhante
                     strokeColor = Color.White,
-                    strokeWidth = 2f
+                    strokeWidth = 2.5f
                 )
+
+                // ══════════════════════════════════════════════════════════
+                // CAMADA 7: Ponto Central (Precisão)
+                // ══════════════════════════════════════════════════════════
+                Circle(
+                    center = prestadorPos,
+                    radius = 4.0,
+                    fillColor = Color(0xFF00C853),
+                    strokeColor = Color.Transparent,
+                    strokeWidth = 0f
+                )
+            } else if (!prestadorVisivel) {
+                Log.w("TelaRastreamento", "⚠️ Marcador do prestador NÃO VISÍVEL - aguardando primeira localização")
             }
 
             // Marcadores das paradas - ESTILO MODERNO FACILITA
@@ -649,6 +742,7 @@ fun TelaRastreamentoServico(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.padding(top = 4.dp)
                         ) {
+                            // Status da conexão WebSocket
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
@@ -660,9 +754,45 @@ fun TelaRastreamentoServico(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isSocketConnected) "🟢 Ao vivo" else "🔴 Offline",
+                                text = if (isSocketConnected) "🟢 Conectado" else "🔴 Offline",
                                 fontSize = 11.sp,
                                 color = if (isSocketConnected) Color(0xFF019D31) else Color(0xFFFF0000),
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            // Separador
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "•",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Status do rastreamento do prestador - MELHORADO
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(
+                                        if (prestadorVisivel) Color(0xFF00C853).copy(alpha = pulseAlpha)
+                                        else if (isSocketConnected) Color(0xFFFFAB00).copy(alpha = pulseAlpha)
+                                        else Color(0xFFFF0000),
+                                        CircleShape
+                                    )
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = when {
+                                    prestadorVisivel -> "🚗 Rastreando"
+                                    isSocketConnected -> "⏳ Aguardando GPS"
+                                    else -> "❌ Offline"
+                                },
+                                fontSize = 11.sp,
+                                color = when {
+                                    prestadorVisivel -> Color(0xFF00C853)
+                                    isSocketConnected -> Color(0xFFFFAB00)
+                                    else -> Color(0xFFFF0000)
+                                },
                                 fontWeight = FontWeight.Medium
                             )
                         }
