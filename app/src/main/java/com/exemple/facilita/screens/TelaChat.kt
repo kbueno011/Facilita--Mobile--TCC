@@ -94,6 +94,9 @@ fun TelaChat(
                 kotlinx.coroutines.delay(1500)
             } else {
                 Log.d("TelaChat", "✅ Usando WebSocket já conectado (do rastreamento)")
+                Log.d("TelaChat", "🔄 Garantindo que listeners de chat estão registrados...")
+                // Garante que os listeners estão registrados mesmo se socket já estava conectado
+                webSocketManager.ensureListenersRegistered()
             }
 
             // Sempre entra na sala do serviço (garante que está na sala correta)
@@ -103,6 +106,20 @@ fun TelaChat(
         } else {
             Log.e("TelaChat", "❌ UserId inválido: $userId - não pode usar chat")
         }
+    }
+
+    // Monitora mudanças nas mensagens
+    LaunchedEffect(messages) {
+        Log.d("TelaChat", "")
+        Log.d("TelaChat", "╔════════════════════════════════════════════════╗")
+        Log.d("TelaChat", "║  📨 MENSAGENS ATUALIZADAS!                    ║")
+        Log.d("TelaChat", "╚════════════════════════════════════════════════╝")
+        Log.d("TelaChat", "   📊 Total de mensagens: ${messages.size}")
+        messages.forEachIndexed { index, msg ->
+            Log.d("TelaChat", "   [$index] ${if (msg.isOwn) "VOCÊ" else msg.userName}: ${msg.mensagem}")
+        }
+        Log.d("TelaChat", "╚════════════════════════════════════════════════╝")
+        Log.d("TelaChat", "")
     }
 
     // Rola para última mensagem quando recebe nova

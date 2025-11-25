@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,8 +22,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -694,6 +697,190 @@ fun TelaRastreamentoServico(
             }
         }
 
+        // Dialog de mapa expandido (tela cheia) - mantido para referência futura
+        var mapaExpandido by remember { mutableStateOf(false) }
+
+        if (mapaExpandido) {
+            Dialog(
+                onDismissRequest = { mapaExpandido = false },
+                properties = androidx.compose.ui.window.DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = false
+                )
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        properties = MapProperties(
+                            isMyLocationEnabled = false,
+                            mapType = MapType.NORMAL,
+                            isTrafficEnabled = false,
+                            isIndoorEnabled = true
+                        ),
+                        uiSettings = MapUiSettings(
+                            zoomControlsEnabled = true,
+                            myLocationButtonEnabled = false,
+                            compassEnabled = true,
+                            mapToolbarEnabled = true,
+                            scrollGesturesEnabled = true,
+                            zoomGesturesEnabled = true,
+                            tiltGesturesEnabled = true,
+                            rotationGesturesEnabled = true,
+                            scrollGesturesEnabledDuringRotateOrZoom = true
+                        )
+                    ) {
+                        // Rota
+                        if (routePoints.isNotEmpty()) {
+                            Polyline(
+                                points = routePoints,
+                                color = Color(0xFF006400),
+                                width = 12f,
+                                geodesic = true
+                            )
+                            Polyline(
+                                points = routePoints,
+                                color = Color(0xFF00C853),
+                                width = 8f,
+                                geodesic = true
+                            )
+                            Polyline(
+                                points = routePoints,
+                                color = Color.White.copy(alpha = 0.7f),
+                                width = 2f,
+                                geodesic = true
+                            )
+                        }
+
+                        // Marcador do prestador
+                        if (prestadorVisivel && prestadorLat != 0.0 && prestadorLng != 0.0) {
+                            Circle(
+                                center = prestadorPos,
+                                radius = 80.0 * pulseAlpha,
+                                fillColor = Color(0x2000C853),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Circle(
+                                center = prestadorPos,
+                                radius = 45.0,
+                                fillColor = Color(0x4000C853),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Circle(
+                                center = prestadorPos,
+                                radius = 28.0,
+                                fillColor = Color(0xFF00C853),
+                                strokeColor = Color.White,
+                                strokeWidth = 6f
+                            )
+                            Circle(
+                                center = prestadorPos,
+                                radius = 22.0,
+                                fillColor = Color(0xE000A038),
+                                strokeColor = Color.Transparent,
+                                strokeWidth = 0f
+                            )
+                            Circle(
+                                center = prestadorPos,
+                                radius = 14.0,
+                                fillColor = Color.White,
+                                strokeColor = Color(0xFF00C853),
+                                strokeWidth = 2f
+                            )
+                        }
+
+                        // Marcadores das paradas
+                        paradas.forEachIndexed { index, parada ->
+                            val latLng = LatLng(parada.lat, parada.lng)
+                            val isOrigem = parada.tipo == "origem"
+                            val isDestino = parada.tipo == "destino"
+
+                            when (parada.tipo) {
+                                "parada" -> {
+                                    // Parada intermediária - círculo laranja
+                                    Circle(
+                                        center = latLng,
+                                        radius = 25.0,
+                                        fillColor = Color(0xFFFFA726),
+                                        strokeColor = Color.White,
+                                        strokeWidth = 5f
+                                    )
+                                    Circle(
+                                        center = latLng,
+                                        radius = 5.0,
+                                        fillColor = Color(0xFF00C853),
+                                        strokeColor = Color.Transparent,
+                                        strokeWidth = 0f
+                                    )
+                                }
+                                "destino" -> {
+                                    // Destino - pin vermelho
+                                    Circle(
+                                        center = latLng,
+                                        radius = 35.0,
+                                        fillColor = Color(0x40FF1744),
+                                        strokeColor = Color.Transparent,
+                                        strokeWidth = 0f
+                                    )
+                                    Circle(
+                                        center = latLng,
+                                        radius = 20.0,
+                                        fillColor = Color(0xFFFF1744),
+                                        strokeColor = Color.White,
+                                        strokeWidth = 5f
+                                    )
+                                    Circle(
+                                        center = latLng,
+                                        radius = 7.0,
+                                        fillColor = Color.White,
+                                        strokeColor = Color.Transparent,
+                                        strokeWidth = 0f
+                                    )
+                                }
+                            }
+                        }
+
+                        // Marcador de destino
+                        val localizacaoFallback = servico?.localizacao
+                        if (localizacaoFallback?.latitude != null && localizacaoFallback.longitude != null) {
+                            val finalDestinoPos = LatLng(
+                                localizacaoFallback.latitude,
+                                localizacaoFallback.longitude
+                            )
+                            Marker(
+                                state = MarkerState(position = finalDestinoPos),
+                                title = "Destino",
+                                snippet = localizacaoFallback.endereco ?: "",
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                            )
+                        }
+                    }
+
+                    // Botão fechar no topo direito
+                    IconButton(
+                        onClick = { mapaExpandido = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .statusBarsPadding()
+                            .size(56.dp)
+                            .background(Color.White, CircleShape)
+                            .shadow(12.dp, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Fechar",
+                            tint = Color(0xFF019D31),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Header moderno com indicador de tempo real
         Card(
             modifier = Modifier
@@ -880,35 +1067,65 @@ fun TelaRastreamentoServico(
             }
         }
 
-        // Card inferior estilo Uber com informações completas
-        Card(
+        // Estado para controlar se o card está expandido ou recolhido
+        var cardExpandido by remember { mutableStateOf(true) }
+
+        // Botão flutuante para ocultar/mostrar card (estilo Uber/99)
+        FloatingActionButton(
+            onClick = { cardExpandido = !cardExpandido },
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(16.dp)
-                .navigationBarsPadding(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(16.dp)
+                .align(Alignment.BottomEnd)
+                .padding(
+                    bottom = if (cardExpandido) 320.dp else 24.dp,
+                    end = 16.dp
+                ),
+            containerColor = Color.White,
+            contentColor = Color(0xFF019D31),
+            elevation = FloatingActionButtonDefaults.elevation(8.dp)
         ) {
-            Column(
+            Icon(
+                imageVector = if (cardExpandido) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                contentDescription = if (cardExpandido) "Ocultar informações" else "Mostrar informações",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Card inferior estilo Uber com informações completas (RECOLHÍVEL)
+        if (cardExpandido) {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp)
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .navigationBarsPadding(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(16.dp)
             ) {
-                // Linha decorativa no topo (estilo Uber)
-                Box(
+                Column(
                     modifier = Modifier
-                        .width(40.dp)
-                        .height(4.dp)
-                        .background(Color(0xFFE0E0E0), RoundedCornerShape(2.dp))
-                        .align(Alignment.CenterHorizontally)
-                )
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp)
+                ) {
+                    // Linha decorativa no topo (estilo Uber) - CLICÁVEL para recolher
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { cardExpandido = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .background(Color(0xFFE0E0E0), RoundedCornerShape(2.dp))
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                 // Cabeçalho do prestador com borda gradiente
                 Row(
@@ -1131,6 +1348,7 @@ fun TelaRastreamentoServico(
                 }
             }
         }
+        } // Fecha if (cardExpandido)
 
         // Loading overlay
         if (isLoading) {

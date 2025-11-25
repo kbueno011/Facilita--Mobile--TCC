@@ -41,6 +41,64 @@ class WebSocketManager {
     private var connectionData: Triple<Int, String, String>? = null
     private var pendingJoinServico: String? = null
 
+    /**
+     * Garante que os listeners estão registrados (pode ser chamado múltiplas vezes)
+     */
+    fun ensureListenersRegistered() {
+        if (socket == null) {
+            Log.e(TAG, "❌ Socket é null! Não pode registrar listeners")
+            return
+        }
+
+        Log.d(TAG, "")
+        Log.d(TAG, "╔════════════════════════════════════════════════╗")
+        Log.d(TAG, "║  🔄 GARANTINDO LISTENERS REGISTRADOS          ║")
+        Log.d(TAG, "╚════════════════════════════════════════════════╝")
+        Log.d(TAG, "   Socket conectado? ${socket?.connected()}")
+        Log.d(TAG, "")
+
+        // Remove listeners antigos para evitar duplicação
+        Log.d(TAG, "🗑️ Removendo listeners antigos...")
+        socket?.off(Socket.EVENT_CONNECT)
+        socket?.off(Socket.EVENT_DISCONNECT)
+        socket?.off(Socket.EVENT_CONNECT_ERROR)
+        socket?.off("location_updated")
+        socket?.off("connect_response")
+        socket?.off("servico_joined")
+        socket?.off("receive_message")
+        Log.d(TAG, "   ✅ Listeners antigos removidos")
+
+        Log.d(TAG, "")
+        Log.d(TAG, "📡 Registrando listeners novamente...")
+
+        // Registra novamente
+        socket?.on(Socket.EVENT_CONNECT, onConnect)
+        Log.d(TAG, "   ✅ EVENT_CONNECT")
+
+        socket?.on(Socket.EVENT_DISCONNECT, onDisconnect)
+        Log.d(TAG, "   ✅ EVENT_DISCONNECT")
+
+        socket?.on(Socket.EVENT_CONNECT_ERROR, onConnectError)
+        Log.d(TAG, "   ✅ EVENT_CONNECT_ERROR")
+
+        socket?.on("location_updated", onLocationUpdated)
+        Log.d(TAG, "   ✅ location_updated")
+
+        socket?.on("connect_response", onConnectResponse)
+        Log.d(TAG, "   ✅ connect_response")
+
+        socket?.on("servico_joined", onServicoJoined)
+        Log.d(TAG, "   ✅ servico_joined")
+
+        socket?.on("receive_message", onReceiveMessage)
+        Log.d(TAG, "   ✅ receive_message ← CHAT")
+
+        Log.d(TAG, "")
+        Log.d(TAG, "✅ TODOS OS 7 LISTENERS REGISTRADOS COM SUCESSO!")
+        Log.d(TAG, "╚════════════════════════════════════════════════╝")
+        Log.d(TAG, "")
+    }
+
     fun connect(userId: Int, userType: String, userName: String) {
         try {
             // Armazena dados de conexão
@@ -62,26 +120,7 @@ class WebSocketManager {
             Log.d(TAG, "║  📡 REGISTRANDO LISTENERS DO WEBSOCKET        ║")
             Log.d(TAG, "╚════════════════════════════════════════════════╝")
 
-            socket?.on(Socket.EVENT_CONNECT, onConnect)
-            Log.d(TAG, "✅ Listener: EVENT_CONNECT")
-
-            socket?.on(Socket.EVENT_DISCONNECT, onDisconnect)
-            Log.d(TAG, "✅ Listener: EVENT_DISCONNECT")
-
-            socket?.on(Socket.EVENT_CONNECT_ERROR, onConnectError)
-            Log.d(TAG, "✅ Listener: EVENT_CONNECT_ERROR")
-
-            socket?.on("location_updated", onLocationUpdated)
-            Log.d(TAG, "✅ Listener: location_updated (LOCALIZAÇÃO DO PRESTADOR)")
-
-            socket?.on("connect_response", onConnectResponse)
-            Log.d(TAG, "✅ Listener: connect_response")
-
-            socket?.on("servico_joined", onServicoJoined)
-            Log.d(TAG, "✅ Listener: servico_joined (CONFIRMAÇÃO DE ENTRADA NA SALA)")
-
-            socket?.on("receive_message", onReceiveMessage)
-            Log.d(TAG, "✅ Listener: receive_message (MENSAGENS DE CHAT)")
+            ensureListenersRegistered()
 
             Log.d(TAG, "")
             Log.d(TAG, "📊 TOTAL DE LISTENERS: 7 específicos + diagnóstico")
@@ -480,7 +519,10 @@ class WebSocketManager {
      */
     private val onReceiveMessage = Emitter.Listener { args ->
         try {
-            Log.d(TAG, "🎉🎉🎉 EVENTO RECEIVE_MESSAGE CHAMADO! 🎉🎉🎉")
+            Log.d(TAG, "")
+            Log.d(TAG, "╔════════════════════════════════════════════════╗")
+            Log.d(TAG, "║  🎉 EVENTO RECEIVE_MESSAGE CHAMADO!          ║")
+            Log.d(TAG, "╚════════════════════════════════════════════════╝")
             Log.d(TAG, "💬 Mensagem de chat recebida!")
             Log.d(TAG, "   Total de args: ${args.size}")
 
@@ -490,35 +532,61 @@ class WebSocketManager {
             }
 
             val data = args[0] as JSONObject
-            Log.d(TAG, "📦 Dados RAW: $data")
-            Log.d(TAG, "📦 Dados toString: ${data.toString()}")
+            Log.d(TAG, "")
+            Log.d(TAG, "📦 DADOS RECEBIDOS:")
+            Log.d(TAG, "   RAW JSON: $data")
 
+            // Tenta pegar todos os campos possíveis
             val servicoId = data.optInt("servicoId", 0)
             val mensagem = data.optString("mensagem", "")
+            val message = data.optString("message", "") // às vezes vem como 'message'
+            val texto = if (mensagem.isNotEmpty()) mensagem else message
+
             val sender = data.optString("sender", "")
-            val userName = data.optString("userName", "Desconhecido")
+            val senderType = data.optString("senderType", "")
+            val userName = data.optString("userName", data.optString("name", "Desconhecido"))
             val timestamp = data.optLong("timestamp", System.currentTimeMillis())
 
+            Log.d(TAG, "")
+            Log.d(TAG, "📋 CAMPOS EXTRAÍDOS:")
             Log.d(TAG, "   ✅ ServicoId: $servicoId")
-            Log.d(TAG, "   ✅ Mensagem: $mensagem")
+            Log.d(TAG, "   ✅ Mensagem: $texto")
             Log.d(TAG, "   ✅ Sender: $sender")
+            Log.d(TAG, "   ✅ SenderType: $senderType")
             Log.d(TAG, "   ✅ UserName: $userName")
             Log.d(TAG, "   ✅ Timestamp: $timestamp")
 
+            if (texto.isEmpty()) {
+                Log.e(TAG, "❌ Mensagem vazia! Não será adicionada")
+                return@Listener
+            }
+
+            // Determina se é mensagem própria ou do prestador
+            val isOwnMessage = sender == "contratante" || senderType == "contratante"
+
             val chatMessage = ChatMessage(
                 servicoId = servicoId,
-                mensagem = mensagem,
+                mensagem = texto,
                 sender = sender,
                 userName = userName,
                 timestamp = timestamp,
-                isOwn = false
+                isOwn = isOwnMessage
             )
+
+            Log.d(TAG, "")
+            Log.d(TAG, "💾 ADICIONANDO MENSAGEM:")
+            Log.d(TAG, "   Tipo: ${if (isOwnMessage) "PRÓPRIA" else "PRESTADOR"}")
+            Log.d(TAG, "   Mensagem antes de adicionar: ${_chatMessages.value.size}")
 
             val currentMessages = _chatMessages.value.toMutableList()
             currentMessages.add(chatMessage)
             _chatMessages.value = currentMessages
 
-            Log.d(TAG, "✅ Mensagem adicionada. Total: ${currentMessages.size}")
+            Log.d(TAG, "   ✅ Mensagem adicionada!")
+            Log.d(TAG, "   📊 Total de mensagens agora: ${currentMessages.size}")
+            Log.d(TAG, "")
+            Log.d(TAG, "╚════════════════════════════════════════════════╝")
+            Log.d(TAG, "")
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Erro ao processar mensagem recebida", e)
