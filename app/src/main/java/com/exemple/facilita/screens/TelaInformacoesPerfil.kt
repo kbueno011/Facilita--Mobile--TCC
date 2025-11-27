@@ -85,7 +85,7 @@ fun TelaInformacoesPerfil(navController: NavController) {
         // 🔹 Foto de perfil
         Box(contentAlignment = Alignment.BottomEnd) {
             Image(
-                painter = painterResource(id = R.drawable.foto_perfil),
+                painter = painterResource(id = R.drawable.avatar_usuario_verde),
                 contentDescription = "Foto do usuário",
                 modifier = Modifier
                     .size(120.dp)

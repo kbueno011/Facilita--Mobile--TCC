@@ -59,7 +59,7 @@ fun PerfilPrestadorScreen() {
         // Foto de perfil com ícone de adicionar
         Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.BottomEnd) {
             Image(
-                painter = painterResource(id = R.drawable.foto_perfil), // substitua com sua imagem
+                painter = painterResource(id = R.drawable.avatar_usuario_verde),
                 contentDescription = "Foto de perfil",
                 modifier = Modifier
                     .size(120.dp)

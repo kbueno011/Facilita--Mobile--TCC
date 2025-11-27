@@ -85,7 +85,7 @@ fun TelaPerfilContratante(
                     )
                 } else {
                     Image(
-                        painter = painterResource(id = R.drawable.foto_perfil),
+                        painter = painterResource(id = R.drawable.avatar_usuario_verde),
                         contentDescription = "Foto de perfil",
                         modifier = Modifier.size(120.dp).clip(CircleShape),
                         contentScale = ContentScale.Crop

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Círculo de fundo verde claro -->
+    <path
+        android:fillColor="#C8E6C9"
+        android:pathData="M100,100m-100,0a100,100 0,1 1,200 0a100,100 0,1 1,-200 0"/>
+
+    <!-- Círculo de fundo verde médio -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M100,120m-85,0a85,85 0,1 1,170 0a85,85 0,1 1,-170 0"/>
+
+    <!-- Cabeça do usuário -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M100,70m-25,0a25,25 0,1 1,50 0a25,25 0,1 1,-50 0"/>
+
+    <!-- Cabelo -->
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M75,60c0,-15 12,-25 25,-25s25,10 25,25c0,5 -2,8 -5,10l-3,-8c-2,-3 -4,-5 -7,-5h-10c-3,0 -5,2 -7,5l-3,8c-3,-2 -5,-5 -5,-10z"/>
+
+    <!-- Corpo/Camisa verde -->
+    <path
+        android:fillColor="#00A651"
+        android:pathData="M100,95c-20,0 -40,10 -45,30c0,15 5,35 10,45h70c5,-10 10,-30 10,-45c-5,-20 -25,-30 -45,-30z"/>
+
+    <!-- Gola da camisa -->
+    <path
+        android:fillColor="#00873D"
+        android:pathData="M85,95l10,15h10l10,-15c-3,-2 -6,-3 -10,-3h-10c-4,0 -7,1 -10,3z"/>
+
+    <!-- Sombra do pescoço -->
+    <path
+        android:fillColor="#2E7D32"
+        android:fillAlpha="0.3"
+        android:pathData="M90,95c3,5 6,8 10,8s7,-3 10,-8c-3,-2 -6,-3 -10,-3s-7,1 -10,3z"/>
+
+</vector>
+
