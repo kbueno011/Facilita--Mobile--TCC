@@ -56,7 +56,8 @@ fun TelaFinalizacaoServico(
         animacaoIniciada = true
         // Aguarda 3 segundos e navega para avaliação
         delay(3000)
-        navController.navigate("tela_avaliacao/$servicoId/$prestadorNome/$valorServico") {
+        val servicoIdInt = servicoId.toIntOrNull() ?: 0
+        navController.navigate("tela_avaliacao/$servicoIdInt/$prestadorNome/$valorServico") {
             popUpTo("tela_rastreamento/$servicoId") { inclusive = true }
         }
     }
@@ -104,7 +105,7 @@ fun TelaFinalizacaoServico(
 
             // Título
             Text(
-                text = "🎉 Serviço Concluído!",
+                text = "Serviço Concluído!",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
