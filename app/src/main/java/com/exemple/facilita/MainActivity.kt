@@ -214,16 +214,29 @@ fun AppNavHost(navController: NavHostController) {
         composable(
             route = "tela_avaliacao/{servicoId}/{prestadorNome}/{valorServico}",
             arguments = listOf(
-                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("servicoId") { type = NavType.IntType },
                 navArgument("prestadorNome") { type = NavType.StringType },
                 navArgument("valorServico") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             TelaAvaliacaoCliente(
                 navController = navController,
-                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "0",
-                prestadorNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador",
+                servicoId = backStackEntry.arguments?.getInt("servicoId") ?: 0,
+                clienteNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador",
                 valorServico = backStackEntry.arguments?.getString("valorServico") ?: "0.00"
+            )
+        }
+
+        // Tela de detalhes do pedido concluído
+        composable(
+            route = "detalhes_pedido_concluido/{pedidoJson}",
+            arguments = listOf(
+                navArgument("pedidoJson") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaDetalhesPedidoConcluido(
+                navController = navController,
+                pedidoJson = backStackEntry.arguments?.getString("pedidoJson") ?: ""
             )
         }
 

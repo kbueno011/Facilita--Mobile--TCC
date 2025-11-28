@@ -43,10 +43,8 @@ import java.util.*
 fun TelaPedidosHistorico(navController: NavController) {
     val context = LocalContext.current
     var pedidos by remember { mutableStateOf<List<PedidoHistorico>>(emptyList()) }
-    var paginacao by remember { mutableStateOf<Paginacao?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var animateContent by remember { mutableStateOf(false) }
-    var paginaAtual by remember { mutableStateOf(1) }
 
     val token = TokenManager.obterTokenComBearer(context) ?: ""
     val primaryGreen = Color(0xFF019D31)
@@ -62,12 +60,12 @@ fun TelaPedidosHistorico(navController: NavController) {
     }
 
     // Buscar histórico com atualização automática a cada 10 segundos
-    LaunchedEffect(paginaAtual) {
+    LaunchedEffect(Unit) {
         fun buscarHistorico(mostrarLoading: Boolean = false) {
             if (mostrarLoading) isLoading = true
 
             val service = RetrofitFactory.servicoService
-            service.getHistoricoPedidos(token, paginaAtual, 10).enqueue(object : Callback<HistoricoPedidosResponse> {
+            service.getHistoricoPedidos(token).enqueue(object : Callback<HistoricoPedidosResponse> {
                 override fun onResponse(
                     call: Call<HistoricoPedidosResponse>,
                     response: Response<HistoricoPedidosResponse>
@@ -76,7 +74,6 @@ fun TelaPedidosHistorico(navController: NavController) {
                         response.body()?.data?.let { data ->
                             val pedidosAnteriores = pedidos.size
                             pedidos = data.pedidos
-                            paginacao = data.paginacao
 
                             android.util.Log.d("TelaHistorico", "✅ Pedidos carregados: ${pedidos.size}")
                             android.util.Log.d("TelaHistorico", "📊 Status dos pedidos:")
@@ -183,13 +180,11 @@ fun TelaPedidosHistorico(navController: NavController) {
                                         fontWeight = FontWeight.Bold,
                                         color = textPrimary
                                     )
-                                    paginacao?.let { pag ->
-                                        Text(
-                                            "${pag.total_pedidos} pedido(s) no total",
-                                            fontSize = 14.sp,
-                                            color = textSecondary
-                                        )
-                                    }
+                                    Text(
+                                        "${pedidos.size} pedido(s) no total",
+                                        fontSize = 14.sp,
+                                        color = textSecondary
+                                    )
                                 }
                             }
                         }
@@ -236,73 +231,16 @@ fun TelaPedidosHistorico(navController: NavController) {
                                     onClick = {
                                         android.util.Log.d("TelaHistorico", "🔍 Clicado no pedido #${pedido.id} - Status: ${pedido.status}")
 
-                                        // Navegação para tela de detalhes passando apenas o ID
-                                        navController.navigate("detalhes_pedido_concluido/${pedido.id}")
+                                        // Navegação para tela de detalhes passando o pedido como JSON codificado
+                                        val pedidoJson = com.google.gson.Gson().toJson(pedido)
+                                        val encodedJson = java.net.URLEncoder.encode(pedidoJson, "UTF-8")
+                                        navController.navigate("detalhes_pedido_concluido/$encodedJson")
                                     },
                                     primaryGreen = primaryGreen,
                                     cardBg = cardBg,
                                     textPrimary = textPrimary,
                                     textSecondary = textSecondary
                                 )
-                            }
-                        }
-                    }
-
-                    // Paginação
-                    paginacao?.let { pag ->
-                        if (pag.total_paginas > 1) {
-                            Surface(
-                                color = Color.White,
-                                shadowElevation = 4.dp
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Botão Anterior
-                                    OutlinedButton(
-                                        onClick = {
-                                            if (pag.pagina_atual > 1) {
-                                                paginaAtual = pag.pagina_atual - 1
-                                            }
-                                        },
-                                        enabled = pag.pagina_atual > 1,
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = primaryGreen
-                                        )
-                                    ) {
-                                        Icon(Icons.Default.ChevronLeft, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Anterior")
-                                    }
-
-                                    // Indicador de página
-                                    Text(
-                                        "${pag.pagina_atual} / ${pag.total_paginas}",
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = textPrimary
-                                    )
-
-                                    // Botão Próximo
-                                    Button(
-                                        onClick = {
-                                            if (pag.pagina_atual < pag.total_paginas) {
-                                                paginaAtual = pag.pagina_atual + 1
-                                            }
-                                        },
-                                        enabled = pag.pagina_atual < pag.total_paginas,
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = primaryGreen
-                                        )
-                                    ) {
-                                        Text("Próximo")
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Icon(Icons.Default.ChevronRight, contentDescription = null)
-                                    }
-                                }
                             }
                         }
                     }
@@ -476,7 +414,7 @@ fun PedidoHistoricoCard(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = pedido.contratante.usuario.nome,
+                            text = pedido.contratante?.usuario?.nome ?: "Cliente",
                             fontSize = 16.sp,
                             color = textPrimary,
                             fontWeight = FontWeight.SemiBold

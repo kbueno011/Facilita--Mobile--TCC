@@ -21,18 +21,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.exemple.facilita.service.*
-import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.service.PedidoHistorico
 import kotlinx.coroutines.delay
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,16 +36,25 @@ import java.util.*
 @Composable
 fun TelaDetalhesPedidoConcluido(
     navController: NavController,
-    pedidoId: Int
+    pedidoJson: String
 ) {
-    val context = LocalContext.current
-    var pedido by remember { mutableStateOf<PedidoHistorico?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
+    // Desserializar o pedido do JSON
+    val pedido = remember {
+        try {
+            // Decodificar o JSON da URL
+            val decodedJson = java.net.URLDecoder.decode(pedidoJson, "UTF-8")
+            android.util.Log.d("DetalhesPedido", "📝 JSON decodificado: $decodedJson")
+            com.google.gson.Gson().fromJson(decodedJson, PedidoHistorico::class.java)
+        } catch (e: Exception) {
+            android.util.Log.e("DetalhesPedido", "❌ Erro ao desserializar: ${e.message}")
+            android.util.Log.e("DetalhesPedido", "❌ JSON recebido: $pedidoJson")
+            e.printStackTrace()
+            null
+        }
+    }
+
     var animateContent by remember { mutableStateOf(false) }
     var showSuccessAnimation by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    val token = TokenManager.obterTokenComBearer(context) ?: ""
 
     // Cores tema LIGHT moderno
     val primaryGreen = Color(0xFF00B14F)
@@ -70,38 +74,13 @@ fun TelaDetalhesPedidoConcluido(
         showSuccessAnimation = true
     }
 
-    // Buscar detalhes do pedido
-    LaunchedEffect(pedidoId) {
-        val service = RetrofitFactory.servicoService
-        service.getDetalhesPedido(token, pedidoId).enqueue(object : Callback<DetalhePedidoResponse> {
-            override fun onResponse(
-                call: Call<DetalhePedidoResponse>,
-                response: Response<DetalhePedidoResponse>
-            ) {
-                if (response.isSuccessful) {
-                    pedido = response.body()?.data
-                    android.util.Log.d("DetalhesPedido", "✅ Pedido carregado: ${pedido?.id}")
-                } else {
-                    errorMessage = "Erro ao carregar detalhes do pedido"
-                    android.util.Log.e("DetalhesPedido", "❌ Erro: ${response.code()}")
-                }
-                isLoading = false
-            }
-
-            override fun onFailure(call: Call<DetalhePedidoResponse>, t: Throwable) {
-                errorMessage = "Falha na conexão: ${t.message}"
-                android.util.Log.e("DetalhesPedido", "❌ Falha: ${t.message}")
-                isLoading = false
-            }
-        })
-    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (pedido != null) "Pedido #${pedido!!.id}" else "Detalhes do Pedido",
+                        if (pedido != null) "Pedido #${pedido.id}" else "Detalhes do Pedido",
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                         color = textPrimary
@@ -129,53 +108,36 @@ fun TelaDetalhesPedidoConcluido(
                 .padding(padding)
                 .background(lightBg)
         ) {
-            when {
-                isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+            if (pedido == null) {
+                // Erro ao carregar pedido
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            CircularProgressIndicator(color = primaryGreen)
-                            Text("Carregando detalhes...", color = textSecondary)
-                        }
+                        Icon(Icons.Default.Error, contentDescription = null, tint = Color.Red, modifier = Modifier.size(64.dp))
+                        Text("Erro ao carregar pedido", color = textPrimary, textAlign = TextAlign.Center)
+                        Button(onClick = { navController.popBackStack() }) { Text("Voltar") }
                     }
                 }
-
-                errorMessage != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Icon(Icons.Default.Error, contentDescription = null, tint = Color.Red, modifier = Modifier.size(64.dp))
-                            Text(errorMessage ?: "", color = textPrimary, textAlign = TextAlign.Center)
-                            Button(onClick = { navController.popBackStack() }) { Text("Voltar") }
-                        }
-                    }
-                }
-
-                pedido != null -> {
-                    LazyColumnContent(
-                        pedido = pedido!!,
-                        animateContent = animateContent,
-                        showSuccessAnimation = showSuccessAnimation,
-                        primaryGreen = primaryGreen,
-                        lightBg = lightBg,
-                        cardBg = cardBg,
-                        accentBlue = accentBlue,
-                        accentOrange = accentOrange,
-                        successGreen = successGreen,
-                        textPrimary = textPrimary,
-                        textSecondary = textSecondary
-                    )
-                }
+            } else {
+                // Exibir conteúdo
+                LazyColumnContent(
+                    pedido = pedido,
+                    animateContent = animateContent,
+                    showSuccessAnimation = showSuccessAnimation,
+                    primaryGreen = primaryGreen,
+                    lightBg = lightBg,
+                    cardBg = cardBg,
+                    accentBlue = accentBlue,
+                    accentOrange = accentOrange,
+                    successGreen = successGreen,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary
+                )
             }
         }
     }
@@ -421,58 +383,61 @@ private fun ContratanteCard(
     textPrimary: Color,
     textSecondary: Color
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
+    // Só exibe o card se tiver contratante
+    pedido.contratante?.let { contratante ->
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
-            SectionHeader("Contratante", accentOrange, textPrimary)
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(20.dp)
             ) {
-                // Avatar
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(accentOrange, CircleShape),
-                    contentAlignment = Alignment.Center
+                SectionHeader("Contratante", accentOrange, textPrimary)
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = pedido.contratante.usuario.nome.firstOrNull()?.uppercase() ?: "C",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                    // Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(accentOrange, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = contratante.usuario.nome.firstOrNull()?.uppercase() ?: "C",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                Column {
-                    Text(
-                        text = pedido.contratante.usuario.nome,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimary
-                    )
+                    Column {
+                        Text(
+                            text = contratante.usuario.nome,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
 
-                    Text(
-                        text = pedido.contratante.usuario.email,
-                        fontSize = 14.sp,
-                        color = textSecondary
-                    )
+                        Text(
+                            text = contratante.usuario.email,
+                            fontSize = 14.sp,
+                            color = textSecondary
+                        )
 
-                    Text(
-                        text = pedido.contratante.usuario.telefone,
-                        fontSize = 14.sp,
-                        color = textSecondary
-                    )
+                        Text(
+                            text = contratante.usuario.telefone,
+                            fontSize = 14.sp,
+                            color = textSecondary
+                        )
+                    }
                 }
             }
         }

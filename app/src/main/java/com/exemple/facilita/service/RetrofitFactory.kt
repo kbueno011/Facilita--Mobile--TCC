@@ -30,4 +30,9 @@ object RetrofitFactory {
     val servicoApiService: ServicoApiService by lazy {
         retrofit.create(ServicoApiService::class.java)
     }
+
+    // ServicoService para histórico e detalhes de pedidos
+    val servicoService: ServicoService by lazy {
+        retrofit.create(ServicoService::class.java)
+    }
 }
