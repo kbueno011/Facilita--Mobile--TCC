@@ -36,25 +36,46 @@ import java.util.*
 @Composable
 fun TelaDetalhesPedidoConcluido(
     navController: NavController,
-    pedidoJson: String
+    sharedViewModel: com.exemple.facilita.viewmodel.PedidoSharedViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    // Desserializar o pedido do JSON
-    val pedido = remember {
-        try {
-            // Decodificar o JSON da URL
-            val decodedJson = java.net.URLDecoder.decode(pedidoJson, "UTF-8")
-            android.util.Log.d("DetalhesPedido", "📝 JSON decodificado: $decodedJson")
-            com.google.gson.Gson().fromJson(decodedJson, PedidoHistorico::class.java)
-        } catch (e: Exception) {
-            android.util.Log.e("DetalhesPedido", "❌ Erro ao desserializar: ${e.message}")
-            android.util.Log.e("DetalhesPedido", "❌ JSON recebido: $pedidoJson")
-            e.printStackTrace()
-            null
-        }
-    }
+    var pedido by remember { mutableStateOf<PedidoHistorico?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var animateContent by remember { mutableStateOf(false) }
     var showSuccessAnimation by remember { mutableStateOf(false) }
+
+    // Obter pedido do ViewModel
+    LaunchedEffect(Unit) {
+        android.util.Log.d("DetalhesPedido", "🔍 Obtendo pedido do ViewModel")
+
+        try {
+            val pedidoData = sharedViewModel.getPedido()
+
+            if (pedidoData != null) {
+                android.util.Log.d("DetalhesPedido", "✅ Pedido #${pedidoData.id} obtido")
+                pedido = pedidoData
+                isLoading = false
+            } else {
+                android.util.Log.e("DetalhesPedido", "❌ Nenhum pedido no ViewModel")
+                errorMessage = "Pedido não encontrado. Volte e tente novamente."
+                isLoading = false
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DetalhesPedido", "❌ Erro: ${e.message}")
+            e.printStackTrace()
+            errorMessage = "Erro: ${e.message}"
+            isLoading = false
+        }
+    }
+
+    // Limpar ViewModel ao sair
+    DisposableEffect(Unit) {
+        onDispose {
+            android.util.Log.d("DetalhesPedido", "🧹 Limpando ViewModel")
+            sharedViewModel.clearPedido()
+        }
+    }
 
     // Cores tema LIGHT moderno
     val primaryGreen = Color(0xFF00B14F)
@@ -80,7 +101,7 @@ fun TelaDetalhesPedidoConcluido(
             TopAppBar(
                 title = {
                     Text(
-                        if (pedido != null) "Pedido #${pedido.id}" else "Detalhes do Pedido",
+                        pedido?.let { "Pedido #${it.id}" } ?: "Detalhes do Pedido",
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                         color = textPrimary
@@ -108,36 +129,80 @@ fun TelaDetalhesPedidoConcluido(
                 .padding(padding)
                 .background(lightBg)
         ) {
-            if (pedido == null) {
-                // Erro ao carregar pedido
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+            when {
+                isLoading -> {
+                    // Estado de loading
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Error, contentDescription = null, tint = Color.Red, modifier = Modifier.size(64.dp))
-                        Text("Erro ao carregar pedido", color = textPrimary, textAlign = TextAlign.Center)
-                        Button(onClick = { navController.popBackStack() }) { Text("Voltar") }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = primaryGreen,
+                                strokeWidth = 3.dp
+                            )
+                            Text(
+                                "Carregando detalhes...",
+                                color = textSecondary,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
-            } else {
-                // Exibir conteúdo
-                LazyColumnContent(
-                    pedido = pedido,
-                    animateContent = animateContent,
-                    showSuccessAnimation = showSuccessAnimation,
-                    primaryGreen = primaryGreen,
-                    lightBg = lightBg,
-                    cardBg = cardBg,
-                    accentBlue = accentBlue,
-                    accentOrange = accentOrange,
-                    successGreen = successGreen,
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary
-                )
+
+                errorMessage != null -> {
+                    // Estado de erro
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = null,
+                                tint = Color.Red,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                errorMessage ?: "Erro ao carregar pedido",
+                                color = textPrimary,
+                                textAlign = TextAlign.Center
+                            )
+                            Button(
+                                onClick = { navController.popBackStack() },
+                                colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
+                            ) {
+                                Text("Voltar")
+                            }
+                        }
+                    }
+                }
+
+                pedido != null -> {
+                    // Exibir conteúdo
+                    pedido?.let { pedidoData ->
+                        LazyColumnContent(
+                            pedido = pedidoData,
+                            animateContent = animateContent,
+                            showSuccessAnimation = showSuccessAnimation,
+                            primaryGreen = primaryGreen,
+                            lightBg = lightBg,
+                            cardBg = cardBg,
+                            accentBlue = accentBlue,
+                            accentOrange = accentOrange,
+                            successGreen = successGreen,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary
+                        )
+                    }
+                }
             }
         }
     }
@@ -188,13 +253,26 @@ private fun LazyColumnContent(
             InfoPrincipaisCard(pedido, cardBg, primaryGreen, accentBlue, textPrimary, textSecondary)
         }
 
-        // Informações do contratante
-        AnimatedVisibility(
-            visible = animateContent,
-            enter = fadeIn(animationSpec = tween(600, delayMillis = 400)) +
-                    slideInVertically(initialOffsetY = { 100 }, animationSpec = tween(600, delayMillis = 400))
-        ) {
-            ContratanteCard(pedido, cardBg, accentOrange, textPrimary, textSecondary)
+        // Informações do prestador (se houver)
+        pedido.prestador?.let { prestador ->
+            AnimatedVisibility(
+                visible = animateContent,
+                enter = fadeIn(animationSpec = tween(600, delayMillis = 300)) +
+                        slideInVertically(initialOffsetY = { 100 }, animationSpec = tween(600, delayMillis = 300))
+            ) {
+                PrestadorCard(prestador, cardBg, primaryGreen, textPrimary, textSecondary)
+            }
+        }
+
+        // Informações do contratante (se houver)
+        pedido.contratante?.let { _ ->
+            AnimatedVisibility(
+                visible = animateContent,
+                enter = fadeIn(animationSpec = tween(600, delayMillis = 400)) +
+                        slideInVertically(initialOffsetY = { 100 }, animationSpec = tween(600, delayMillis = 400))
+            ) {
+                ContratanteCard(pedido, cardBg, accentOrange, textPrimary, textSecondary)
+            }
         }
 
         // Resumo financeiro
@@ -236,6 +314,35 @@ private fun StatusSuccessCard(
         }
     }
 
+    // Definir cor e ícone baseado no status
+    val (statusColor, statusIcon, statusText) = when(pedido.status) {
+        "CONCLUIDO", "FINALIZADO" -> Triple(
+            Color(0xFF4CAF50),
+            Icons.Default.CheckCircle,
+            "PEDIDO CONCLUÍDO"
+        )
+        "EM_ANDAMENTO" -> Triple(
+            Color(0xFFFFA726),
+            Icons.Default.LocalShipping,
+            "PEDIDO EM ANDAMENTO"
+        )
+        "PENDENTE" -> Triple(
+            Color(0xFF2196F3),
+            Icons.Default.AccessTime,
+            "PEDIDO PENDENTE"
+        )
+        "CANCELADO" -> Triple(
+            Color(0xFFF44336),
+            Icons.Default.Cancel,
+            "PEDIDO CANCELADO"
+        )
+        else -> Triple(
+            successGreen,
+            Icons.Default.Info,
+            "PEDIDO ${pedido.status}"
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -250,8 +357,8 @@ private fun StatusSuccessCard(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            successGreen.copy(alpha = 0.2f),
-                            successGreen.copy(alpha = 0.1f)
+                            statusColor.copy(alpha = 0.2f),
+                            statusColor.copy(alpha = 0.1f)
                         )
                     )
                 )
@@ -261,7 +368,7 @@ private fun StatusSuccessCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Ícone de sucesso com pulse
+                // Ícone com pulse
                 Box(contentAlignment = Alignment.Center) {
                     // Anel externo pulsante
                     Box(
@@ -269,18 +376,18 @@ private fun StatusSuccessCard(
                             .size(100.dp)
                             .scale(scale)
                             .alpha(0.3f)
-                            .background(successGreen, CircleShape)
+                            .background(statusColor, CircleShape)
                     )
 
                     // Ícone central
                     Box(
                         modifier = Modifier
                             .size(80.dp)
-                            .background(successGreen, CircleShape),
+                            .background(statusColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.CheckCircle,
+                            statusIcon,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(48.dp)
@@ -291,10 +398,10 @@ private fun StatusSuccessCard(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "PEDIDO CONCLUÍDO",
+                    text = statusText,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = successGreen,
+                    color = statusColor,
                     letterSpacing = 2.sp
                 )
 
@@ -336,9 +443,30 @@ private fun InfoPrincipaisCard(
             // Grid de informações
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 InfoRow(
+                    icon = Icons.Default.Info,
+                    label = "Status",
+                    value = when(pedido.status) {
+                        "PENDENTE" -> "Pendente"
+                        "EM_ANDAMENTO" -> "Em Andamento"
+                        "CONCLUIDO" -> "Concluído"
+                        "FINALIZADO" -> "Finalizado"
+                        "CANCELADO" -> "Cancelado"
+                        else -> pedido.status
+                    },
+                    iconColor = when(pedido.status) {
+                        "CONCLUIDO", "FINALIZADO" -> Color(0xFF4CAF50)
+                        "EM_ANDAMENTO" -> Color(0xFFFFA726)
+                        "CANCELADO" -> Color(0xFFF44336)
+                        else -> accentBlue
+                    },
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary
+                )
+
+                InfoRow(
                     icon = Icons.Default.Build,
                     label = "Categoria",
-                    value = pedido.categoria.nome,
+                    value = pedido.categoria?.nome ?: "Não especificado",
                     iconColor = primaryGreen,
                     textPrimary = textPrimary,
                     textSecondary = textSecondary
@@ -362,14 +490,111 @@ private fun InfoPrincipaisCard(
                     textSecondary = textSecondary
                 )
 
-                InfoRow(
-                    icon = Icons.Default.Place,
-                    label = "Endereço",
-                    value = pedido.endereco,
-                    iconColor = accentBlue,
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary
-                )
+                // Mostrar data de conclusão se existir
+                pedido.data_conclusao?.let { dataConclusao ->
+                    InfoRow(
+                        icon = Icons.Default.CheckCircle,
+                        label = "Data Conclusão",
+                        value = formatarDataDetalhes(dataConclusao),
+                        iconColor = Color(0xFF4CAF50),
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
+                    )
+                }
+
+                // Mostrar localização se existir
+                pedido.localizacao?.let { loc ->
+                    InfoRow(
+                        icon = Icons.Default.Place,
+                        label = "Localização",
+                        value = loc.cidade,
+                        iconColor = accentBlue,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
+                    )
+                }
+
+                // Mostrar endereço se não estiver vazio
+                if (pedido.endereco.isNotEmpty()) {
+                    InfoRow(
+                        icon = Icons.Default.Place,
+                        label = "Endereço",
+                        value = pedido.endereco,
+                        iconColor = accentBlue,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrestadorCard(
+    prestador: com.exemple.facilita.service.Prestador,
+    cardBg: Color,
+    primaryGreen: Color,
+    textPrimary: Color,
+    textSecondary: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            SectionHeader("Prestador do Serviço", primaryGreen, textPrimary)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(primaryGreen, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = prestador.usuario?.nome?.firstOrNull()?.uppercase() ?: "P",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = prestador.usuario?.nome ?: "Prestador",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary
+                    )
+
+                    Text(
+                        text = prestador.usuario?.email ?: "",
+                        fontSize = 14.sp,
+                        color = textSecondary
+                    )
+
+                    prestador.usuario?.telefone?.let { telefone ->
+                        if (telefone.isNotEmpty()) {
+                            Text(
+                                text = telefone,
+                                fontSize = 14.sp,
+                                color = textSecondary
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -409,7 +634,7 @@ private fun ContratanteCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = contratante.usuario.nome.firstOrNull()?.uppercase() ?: "C",
+                            text = contratante.usuario?.nome?.firstOrNull()?.uppercase() ?: "C",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -420,23 +645,27 @@ private fun ContratanteCard(
 
                     Column {
                         Text(
-                            text = contratante.usuario.nome,
+                            text = contratante.usuario?.nome ?: "Contratante",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
                         )
 
                         Text(
-                            text = contratante.usuario.email,
+                            text = contratante.usuario?.email ?: "",
                             fontSize = 14.sp,
                             color = textSecondary
                         )
 
-                        Text(
-                            text = contratante.usuario.telefone,
-                            fontSize = 14.sp,
-                            color = textSecondary
-                        )
+                        contratante.usuario?.telefone?.let { telefone ->
+                            if (telefone.isNotEmpty()) {
+                                Text(
+                                    text = telefone,
+                                    fontSize = 14.sp,
+                                    color = textSecondary
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -3,8 +3,6 @@ package com.exemple.facilita.screens
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -23,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -91,7 +88,7 @@ fun TelaChat(
                     userName = userName
                 )
                 Log.d("TelaChat", "⏳ Aguardando 1.5 segundos para estabilizar...")
-                kotlinx.coroutines.delay(1500)
+                delay(1500)
             } else {
                 Log.d("TelaChat", "✅ Usando WebSocket já conectado (do rastreamento)")
                 Log.d("TelaChat", "🔄 Garantindo que listeners de chat estão registrados...")
@@ -387,7 +384,7 @@ fun TelaChat(
                     if (textState.text.isEmpty()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Message,
+                                imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = null,
                                 tint = Color.Gray.copy(alpha = 0.5f),
                                 modifier = Modifier.size(18.dp)

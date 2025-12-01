@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.exemple.facilita.screens.*
 import com.exemple.facilita.viewmodel.EnderecoViewModel
+import com.exemple.facilita.viewmodel.PedidoSharedViewModel
 import com.exemplo.facilita.screens.TelaBuscarServico
 import com.google.android.libraries.places.api.Places
 
@@ -23,19 +24,38 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 🔹 Inicializa Places uma vez aqui
-        if (!Places.isInitialized()) {
-            Places.initialize(applicationContext, "AIzaSyBKFwfrLdbTreqsOwnpMS9-zt9KD-HEH28")
-        }
+        try {
+            android.util.Log.d("MainActivity", "🚀 Iniciando app...")
 
-        setContent {
-            val navController = rememberNavController()
-            AppNavHost(navController)
+            // 🔹 Inicializa Places uma vez aqui
+            if (!Places.isInitialized()) {
+                android.util.Log.d("MainActivity", "📍 Inicializando Google Places...")
+                Places.initialize(applicationContext, "AIzaSyBKFwfrLdbTreqsOwnpMS9-zt9KD-HEH28")
+            }
+
+            android.util.Log.d("MainActivity", "🎨 Configurando UI...")
+            setContent {
+                val navController = rememberNavController()
+                AppNavHost(navController)
+            }
+
+            android.util.Log.d("MainActivity", "✅ App iniciado com sucesso!")
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "❌ ERRO AO INICIAR: ${e.message}")
+            e.printStackTrace()
+            throw e
         }
     }
 }
 @Composable
 fun AppNavHost(navController: NavHostController) {
+    android.util.Log.d("AppNavHost", "🗺️ Configurando navegação...")
+
+    // ViewModel compartilhado para passar dados entre telas
+    val pedidoSharedViewModel: PedidoSharedViewModel = viewModel()
+
+    android.util.Log.d("AppNavHost", "✅ ViewModel criado com sucesso")
+
     NavHost(
         navController = navController,
         startDestination = "splash"
@@ -119,7 +139,7 @@ fun AppNavHost(navController: NavHostController) {
             TelaStatusPagamento(navController)
         }
         composable("tela_historico_pedido") {
-            TelaPedidosHistorico(navController)
+            TelaPedidosHistorico(navController, pedidoSharedViewModel)
         }
         composable("tela_pedido_confirmado") {
             TelaPedidoConfirmado(navController)
@@ -228,16 +248,8 @@ fun AppNavHost(navController: NavHostController) {
         }
 
         // Tela de detalhes do pedido concluído
-        composable(
-            route = "detalhes_pedido_concluido/{pedidoJson}",
-            arguments = listOf(
-                navArgument("pedidoJson") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            TelaDetalhesPedidoConcluido(
-                navController = navController,
-                pedidoJson = backStackEntry.arguments?.getString("pedidoJson") ?: ""
-            )
+        composable(route = "detalhes_pedido_concluido") {
+            TelaDetalhesPedidoConcluido(navController = navController, sharedViewModel = pedidoSharedViewModel)
         }
 
         // Tela de corrida em andamento (tempo real)

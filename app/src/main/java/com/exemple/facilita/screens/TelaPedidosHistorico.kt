@@ -27,10 +27,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.exemple.facilita.components.BottomNavBar
 import com.exemple.facilita.service.*
 import com.exemple.facilita.utils.TokenManager
+import com.exemple.facilita.viewmodel.PedidoSharedViewModel
 import kotlinx.coroutines.delay
 import retrofit2.Call
 import retrofit2.Callback
@@ -40,7 +42,10 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelaPedidosHistorico(navController: NavController) {
+fun TelaPedidosHistorico(
+    navController: NavController,
+    sharedViewModel: PedidoSharedViewModel = viewModel()
+) {
     val context = LocalContext.current
     var pedidos by remember { mutableStateOf<List<PedidoHistorico>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -229,12 +234,22 @@ fun TelaPedidosHistorico(navController: NavController) {
                                 PedidoHistoricoCard(
                                     pedido = pedido,
                                     onClick = {
-                                        android.util.Log.d("TelaHistorico", "🔍 Clicado no pedido #${pedido.id} - Status: ${pedido.status}")
+                                        try {
+                                            android.util.Log.d("TelaHistorico", "🔍 Clicado no pedido #${pedido.id}")
 
-                                        // Navegação para tela de detalhes passando o pedido como JSON codificado
-                                        val pedidoJson = com.google.gson.Gson().toJson(pedido)
-                                        val encodedJson = java.net.URLEncoder.encode(pedidoJson, "UTF-8")
-                                        navController.navigate("detalhes_pedido_concluido/$encodedJson")
+                                            // Armazenar no ViewModel (mais seguro que cache)
+                                            sharedViewModel.setPedido(pedido)
+
+                                            // Navegar SEM argumentos
+                                            navController.navigate("detalhes_pedido_concluido") {
+                                                launchSingleTop = true
+                                            }
+
+                                            android.util.Log.d("TelaHistorico", "✅ Navegação OK")
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("TelaHistorico", "❌ Erro: ${e.message}")
+                                            e.printStackTrace()
+                                        }
                                     },
                                     primaryGreen = primaryGreen,
                                     cardBg = cardBg,
@@ -407,7 +422,7 @@ fun PedidoHistoricoCard(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = pedido.categoria.nome,
+                            text = pedido.categoria?.nome ?: "Serviço",
                             fontSize = 12.sp,
                             color = textSecondary,
                             fontWeight = FontWeight.Medium
