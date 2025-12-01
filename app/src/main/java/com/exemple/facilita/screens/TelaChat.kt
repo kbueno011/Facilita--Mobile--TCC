@@ -424,7 +424,8 @@ fun TelaChat(
                                 servicoId = servicoId.toIntOrNull() ?: 0,
                                 mensagem = mensagem,
                                 sender = "contratante",
-                                targetUserId = prestadorId
+                                targetUserId = prestadorId,
+                                senderName = userName // Passa nome do usuário
                             )
                             textState = TextFieldValue("")
                         }

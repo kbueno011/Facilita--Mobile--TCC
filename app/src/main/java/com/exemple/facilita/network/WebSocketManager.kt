@@ -40,6 +40,7 @@ class WebSocketManager {
     // 🔥 NOVA PROPRIEDADE: Armazena dados de conexão para reenviar após reconexão
     private var connectionData: Triple<Int, String, String>? = null
     private var pendingJoinServico: String? = null
+    private var currentUserId: Int = 0 // Para comparar se mensagem é própria
 
     /**
      * Garante que os listeners estão registrados (pode ser chamado múltiplas vezes)
@@ -66,6 +67,9 @@ class WebSocketManager {
         socket?.off("connect_response")
         socket?.off("servico_joined")
         socket?.off("receive_message")
+        socket?.off("message") // Variação de nome
+        socket?.off("chat_message") // Variação de nome
+        socket?.off("new_message") // Variação de nome
         Log.d(TAG, "   ✅ Listeners antigos removidos")
 
         Log.d(TAG, "")
@@ -93,8 +97,18 @@ class WebSocketManager {
         socket?.on("receive_message", onReceiveMessage)
         Log.d(TAG, "   ✅ receive_message ← CHAT")
 
+        // 🔥 Listeners para variações de nomes de eventos de mensagens
+        socket?.on("message", onReceiveMessage)
+        Log.d(TAG, "   ✅ message ← CHAT (variação)")
+
+        socket?.on("chat_message", onReceiveMessage)
+        Log.d(TAG, "   ✅ chat_message ← CHAT (variação)")
+
+        socket?.on("new_message", onReceiveMessage)
+        Log.d(TAG, "   ✅ new_message ← CHAT (variação)")
+
         Log.d(TAG, "")
-        Log.d(TAG, "✅ TODOS OS 7 LISTENERS REGISTRADOS COM SUCESSO!")
+        Log.d(TAG, "✅ TODOS OS 10 LISTENERS REGISTRADOS COM SUCESSO!")
         Log.d(TAG, "╚════════════════════════════════════════════════╝")
         Log.d(TAG, "")
     }
@@ -103,6 +117,7 @@ class WebSocketManager {
         try {
             // Armazena dados de conexão
             connectionData = Triple(userId, userType, userName)
+            currentUserId = userId // Armazena para comparação de mensagens próprias
 
             val options = IO.Options().apply {
                 reconnection = true
@@ -463,13 +478,15 @@ class WebSocketManager {
         servicoId: Int,
         mensagem: String,
         sender: String,
-        targetUserId: Int
+        targetUserId: Int,
+        senderName: String = "Você"
     ) {
         try {
             Log.d(TAG, "💬 Enviando mensagem de chat:")
             Log.d(TAG, "   ServicoId: $servicoId")
             Log.d(TAG, "   Mensagem: $mensagem")
             Log.d(TAG, "   Sender: $sender")
+            Log.d(TAG, "   SenderName: $senderName")
             Log.d(TAG, "   TargetUserId: $targetUserId")
 
             if (socket?.connected() != true) {
@@ -481,7 +498,9 @@ class WebSocketManager {
                 put("servicoId", servicoId)
                 put("mensagem", mensagem)
                 put("sender", sender)
+                put("senderType", sender)
                 put("targetUserId", targetUserId)
+                put("userName", senderName) // Nome de quem está enviando
             }
 
             socket?.emit("send_message", data, object : io.socket.client.Ack {
@@ -492,21 +511,11 @@ class WebSocketManager {
                     }
                 }
             })
-            Log.d(TAG, "✅ Mensagem de chat enviada via WebSocket")
+            Log.d(TAG, "✅ Mensagem enviada via WebSocket")
+            Log.d(TAG, "⏳ Aguardando servidor ecoar a mensagem de volta...")
 
-            // Adiciona mensagem própria na lista local
-            val currentMessages = _chatMessages.value.toMutableList()
-            currentMessages.add(
-                ChatMessage(
-                    servicoId = servicoId,
-                    mensagem = mensagem,
-                    sender = sender,
-                    userName = "Você",
-                    timestamp = System.currentTimeMillis(),
-                    isOwn = true
-                )
-            )
-            _chatMessages.value = currentMessages
+            // ❌ NÃO adiciona localmente - servidor vai ecoar de volta!
+            // Isso evita mensagens duplicadas
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Erro ao enviar mensagem de chat", e)
@@ -536,6 +545,19 @@ class WebSocketManager {
             Log.d(TAG, "📦 DADOS RECEBIDOS:")
             Log.d(TAG, "   RAW JSON: $data")
 
+            processChatMessage(data)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Erro ao processar mensagem recebida", e)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Processa uma mensagem de chat (extraído para reutilização)
+     */
+    private fun processChatMessage(data: JSONObject) {
+        try {
             // Tenta pegar todos os campos possíveis
             val servicoId = data.optInt("servicoId", 0)
             val mensagem = data.optString("mensagem", "")
@@ -544,31 +566,67 @@ class WebSocketManager {
 
             val sender = data.optString("sender", "")
             val senderType = data.optString("senderType", "")
-            val userName = data.optString("userName", data.optString("name", "Desconhecido"))
+            val senderId = data.optInt("userId", 0) // ID de quem enviou
+
+            // Tenta pegar nome do usuário de diferentes lugares
+            var userName = data.optString("userName", "")
+            if (userName.isEmpty()) {
+                userName = data.optString("name", "")
+            }
+            if (userName.isEmpty()) {
+                val senderInfo = data.optJSONObject("senderInfo")
+                if (senderInfo != null) {
+                    userName = senderInfo.optString("userName", senderInfo.optString("name", ""))
+                }
+            }
+            // Se ainda não tem nome, tenta pegar do user object
+            if (userName.isEmpty()) {
+                val user = data.optJSONObject("user")
+                if (user != null) {
+                    userName = user.optString("nome", user.optString("userName", ""))
+                }
+            }
+            if (userName.isEmpty()) {
+                userName = if (sender == "contratante") "Você" else "Prestador"
+            }
+
             val timestamp = data.optLong("timestamp", System.currentTimeMillis())
 
             Log.d(TAG, "")
-            Log.d(TAG, "📋 CAMPOS EXTRAÍDOS:")
+            Log.d(TAG, "📋 CAMPOS EXTRAÍDOS DA MENSAGEM:")
             Log.d(TAG, "   ✅ ServicoId: $servicoId")
             Log.d(TAG, "   ✅ Mensagem: $texto")
             Log.d(TAG, "   ✅ Sender: $sender")
             Log.d(TAG, "   ✅ SenderType: $senderType")
+            Log.d(TAG, "   ✅ SenderId: $senderId")
             Log.d(TAG, "   ✅ UserName: $userName")
+            Log.d(TAG, "   ✅ CurrentUserId: $currentUserId")
             Log.d(TAG, "   ✅ Timestamp: $timestamp")
 
             if (texto.isEmpty()) {
                 Log.e(TAG, "❌ Mensagem vazia! Não será adicionada")
-                return@Listener
+                return
             }
 
-            // Determina se é mensagem própria ou do prestador
-            val isOwnMessage = sender == "contratante" || senderType == "contratante"
+            // Determina se é mensagem própria comparando IDs
+            // Se senderId bater com currentUserId, é mensagem própria
+            val isOwnMessage = if (senderId > 0 && currentUserId > 0) {
+                senderId == currentUserId
+            } else {
+                // Fallback: compara pelo sender type
+                sender == "contratante" || senderType == "contratante"
+            }
+
+            Log.d(TAG, "   🔍 É mensagem própria? $isOwnMessage (SenderId=$senderId vs CurrentUserId=$currentUserId)")
+
+            // Se for mensagem própria, força nome como "Você"
+            val finalUserName = if (isOwnMessage) "Você" else userName
 
             val chatMessage = ChatMessage(
                 servicoId = servicoId,
                 mensagem = texto,
                 sender = sender,
-                userName = userName,
+                userName = finalUserName,
                 timestamp = timestamp,
                 isOwn = isOwnMessage
             )
@@ -576,20 +634,32 @@ class WebSocketManager {
             Log.d(TAG, "")
             Log.d(TAG, "💾 ADICIONANDO MENSAGEM:")
             Log.d(TAG, "   Tipo: ${if (isOwnMessage) "PRÓPRIA" else "PRESTADOR"}")
-            Log.d(TAG, "   Mensagem antes de adicionar: ${_chatMessages.value.size}")
+            Log.d(TAG, "   Nome exibido: $finalUserName")
+            Log.d(TAG, "   Total antes: ${_chatMessages.value.size}")
 
             val currentMessages = _chatMessages.value.toMutableList()
-            currentMessages.add(chatMessage)
-            _chatMessages.value = currentMessages
 
-            Log.d(TAG, "   ✅ Mensagem adicionada!")
-            Log.d(TAG, "   📊 Total de mensagens agora: ${currentMessages.size}")
-            Log.d(TAG, "")
-            Log.d(TAG, "╚════════════════════════════════════════════════╝")
+            // Evita duplicatas (verifica se mensagem já existe)
+            // Usa uma janela de tempo de 5 segundos para considerar duplicata
+            val isDuplicate = currentMessages.any {
+                it.mensagem == chatMessage.mensagem &&
+                Math.abs(it.timestamp - chatMessage.timestamp) < 5000 && // 5 segundos
+                it.sender == chatMessage.sender
+            }
+
+            if (!isDuplicate) {
+                currentMessages.add(chatMessage)
+                _chatMessages.value = currentMessages
+                Log.d(TAG, "   ✅ Mensagem adicionada!")
+                Log.d(TAG, "   📊 Total agora: ${currentMessages.size}")
+            } else {
+                Log.d(TAG, "   ⚠️ Mensagem duplicada ignorada")
+            }
+
             Log.d(TAG, "")
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erro ao processar mensagem recebida", e)
+            Log.e(TAG, "❌ Erro ao processar dados da mensagem", e)
             e.printStackTrace()
         }
     }
@@ -612,6 +682,9 @@ class WebSocketManager {
             socket?.off("connect_response")
             socket?.off("servico_joined")
             socket?.off("receive_message")
+            socket?.off("message")
+            socket?.off("chat_message")
+            socket?.off("new_message")
             socket?.disconnect()
             socket = null
             _isConnected.value = false

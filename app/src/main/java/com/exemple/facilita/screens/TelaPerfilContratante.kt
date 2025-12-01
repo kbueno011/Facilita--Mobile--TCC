@@ -74,7 +74,7 @@ fun TelaPerfilContratante(
             Spacer(modifier = Modifier.height(20.dp))
 
             // 🖼️ Foto de perfil
-            Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.BottomEnd) {
+            Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
                 val imagemPerfil = perfilData?.foto_perfil
                 if (imagemPerfil != null) {
                     Image(
@@ -85,24 +85,12 @@ fun TelaPerfilContratante(
                     )
                 } else {
                     Image(
-                        painter = painterResource(id = R.drawable.avatar_usuario_verde),
+                        painter = painterResource(id = R.drawable.icontiposervico),
                         contentDescription = "Foto de perfil",
                         modifier = Modifier.size(120.dp).clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
                 }
-
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Adicionar foto",
-                    tint = Color(0xFF00A651),
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .padding(4.dp)
-                        .align(Alignment.BottomEnd)
-                )
             }
 
             Spacer(modifier = Modifier.height(25.dp))
