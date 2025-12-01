@@ -243,6 +243,54 @@ fun TelaChat(
                         )
                     }
                 }
+
+                // Botão de chamada de vídeo
+                IconButton(
+                    onClick = {
+                        // Navegar para tela de chamada de vídeo
+                        navController.navigate(
+                            "video_call/$servicoId/$prestadorId/$prestadorNome"
+                        )
+                    },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.15f),
+                            CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = "Chamada de Vídeo",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Botão de chamada de áudio
+                IconButton(
+                    onClick = {
+                        // Navegar para tela de chamada de áudio
+                        navController.navigate(
+                            "audio_call/$servicoId/$prestadorId/$prestadorNome"
+                        )
+                    },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.15f),
+                            CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = "Chamada de Áudio",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
 

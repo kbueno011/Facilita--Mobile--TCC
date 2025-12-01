@@ -700,6 +700,10 @@ class WebSocketManager {
     fun isSocketConnected(): Boolean {
         return socket?.connected() ?: false
     }
+
+    fun getSocket(): Socket? {
+        return socket
+    }
 }
 
 data class LocationUpdate(

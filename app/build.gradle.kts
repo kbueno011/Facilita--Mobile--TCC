@@ -79,6 +79,13 @@ dependencies {
     //Socket.IO para rastreamento em tempo real
     implementation("io.socket:socket.io-client:2.1.0")
 
+    // CameraX para captura de vídeo
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-video:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+
     //COIL biblioteca para fazer chamada das img
     implementation("io.coil-kt:coil-compose:2.7.0")
 

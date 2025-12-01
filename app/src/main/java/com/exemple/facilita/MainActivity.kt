@@ -39,6 +39,11 @@ class MainActivity : ComponentActivity() {
                 AppNavHost(navController)
             }
 
+            // Iniciar serviço de monitoramento de chamadas
+            android.util.Log.d("MainActivity", "📞 Iniciando CallMonitorService...")
+            val callServiceIntent = android.content.Intent(this, com.exemple.facilita.service.CallMonitorService::class.java)
+            startService(callServiceIntent)
+
             android.util.Log.d("MainActivity", "✅ App iniciado com sucesso!")
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "❌ ERRO AO INICIAR: ${e.message}")
@@ -283,6 +288,40 @@ fun AppNavHost(navController: NavHostController) {
                 prestadorTelefone = backStackEntry.arguments?.getString("prestadorTelefone") ?: "",
                 prestadorPlaca = backStackEntry.arguments?.getString("prestadorPlaca") ?: "",
                 prestadorId = backStackEntry.arguments?.getInt("prestadorId") ?: 0
+            )
+        }
+
+        // Tela de chamada de vídeo
+        composable(
+            route = "video_call/{servicoId}/{prestadorId}/{prestadorNome}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("prestadorId") { type = NavType.StringType },
+                navArgument("prestadorNome") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaVideoCall(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "",
+                prestadorId = backStackEntry.arguments?.getString("prestadorId") ?: "",
+                prestadorNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador"
+            )
+        }
+
+        // Tela de chamada de áudio
+        composable(
+            route = "audio_call/{servicoId}/{prestadorId}/{prestadorNome}",
+            arguments = listOf(
+                navArgument("servicoId") { type = NavType.StringType },
+                navArgument("prestadorId") { type = NavType.StringType },
+                navArgument("prestadorNome") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            TelaAudioCall(
+                navController = navController,
+                servicoId = backStackEntry.arguments?.getString("servicoId") ?: "",
+                prestadorId = backStackEntry.arguments?.getString("prestadorId") ?: "",
+                prestadorNome = backStackEntry.arguments?.getString("prestadorNome") ?: "Prestador"
             )
         }
 
